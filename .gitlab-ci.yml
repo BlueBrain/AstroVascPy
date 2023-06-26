@@ -1,0 +1,3 @@
+include:
+- project: molsys/ci
+  file: /ci/pipelines/molsys.bloodflow.yml

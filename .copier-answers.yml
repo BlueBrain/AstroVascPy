@@ -1,0 +1,24 @@
+# Changes here will be overwritten by Copier
+
+_commit: 0.1.20
+_src_path: git@bbpgitlab.epfl.ch:neuromath/python-template.git
+author_email: bbp-ou-molsys@groupes.epfl.ch
+author_name: bbp-ou-molsys
+copyright_license: BBP-internal-confidential
+copyright_year: '2023'
+distribution_name: AstroVascPy
+download_url: https://bbpgitlab.epfl.ch/Molecular Systems/astrovascpy
+init_git: false
+maintainer: Stephanie Battini
+package_name: AstroVascPy
+project_description: AstroVascPy is a Python library for computing the blood pressure and flow through a large vasculature network, incorporating the effect of astrocytic endfeet on the blood vessels radii.
+project_name: AstroVascPy
+project_url: https://bbpteam.epfl.ch/documentation/projects/astrovascpy
+repository_name: AstroVascPy
+repository_namespace: Molecular Systems
+repository_provider: gitlab
+ssh_url: git@bbpgitlab.epfl.ch:Molecular Systems/astrovascpy.git
+support_py37: true
+team_name: Molecular Systems
+tracker_url: https://bbpteam.epfl.ch/project/issues/projects
+version: 0.0.1

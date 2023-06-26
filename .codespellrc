@@ -1,0 +1,4 @@
+[codespell]
+skip = .git/*
+ignore-regex = @groupes.epfl.ch
+ignore-words-list = coo

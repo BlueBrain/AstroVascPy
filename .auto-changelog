@@ -1,0 +1,13 @@
+{
+    "output": "CHANGELOG.md",
+    "template": ".auto-changelog-template.hbs",
+    "tagPrefix": "bloodflow-v",
+    "commitLimit": false,
+    "backfillLimit": false,
+    "ignoreCommitPattern": "Release [0-9]+\\.[0-9]+\\.[0-9]+|Update CHANGELOG.*|.*\\[skip-changelog\\].*|\\[pre-commit.ci\\]",
+    "commitUrl": "https://bbpgitlab.epfl.ch/molsys/bloodflow/commit/{id}",
+    "issueUrl": "https://bbpgitlab.epfl.ch/molsys/bloodflow/issues/{id}",
+    "mergeUrl": "https://bbpgitlab.epfl.ch/molsys/bloodflow/merge_requests/{id}",
+    "compareUrl": "https://bbpgitlab.epfl.ch/molsys/bloodflow/compare/{from}...{to}",
+    "startingVersion": "0.2.0"
+}
