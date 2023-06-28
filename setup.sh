@@ -5,7 +5,7 @@ echo
 if command -v module &> /dev/null
 then
     module purge
-    module load unstable git python gcc hpe-mpi petsc-complex py-petsc4py-complex
+    module load unstable git python gcc hpe-mpi petsc py-petsc4py
 else
     if command -v conda &> /dev/null
     then
@@ -33,7 +33,9 @@ else
                 sed -i 's/"mpi4py"/#"mpi4py"/g' setup.py
             fi
 
-            conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
+            conda install -y -c conda-forge mpi mpi4py petsc petsc4py
+            # If complex number support is needed
+            #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
         fi
     else
         echo
