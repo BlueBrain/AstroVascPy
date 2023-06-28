@@ -1,8 +1,6 @@
 ![AstroVascPy Logo](docs/source/logo/BPP-AstroVascPy-Github.jpg)
 # AstroVascPy
 
-This code is based on a previous code by A. Arnaudon.
-
 AstroVascPy is a Python library for computing the blood pressure and flow through the vasculature
 (whole cortical column). AstroVascPy incorporates the effect of astrocytic endfeet on the blood vessels radii.
 In particular, AstroVascPy replicates the dynamics of the radius of a vessel due to vasodilation.
@@ -57,6 +55,10 @@ Here are the units of these entities:
 -flow (µm^3.s^-1)
 -pressure (g.µm^-1.s^-2)
 -radius (µm)
+
+## Authors
+
+Stéphanie Battini, Nicola Cantarutti, Christos Kotsalos, Alexis Arnaudon
 
 ## Funding and Acknowledgements
 
