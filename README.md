@@ -2,14 +2,16 @@
 # AstroVascPy
 
 AstroVascPy is a Python library for computing the blood pressure and flow through the vasculature
-(whole cortical column). AstroVascPy incorporates the effect of astrocytic endfeet on the blood vessels radii.
+(whole cortical column). AstroVascPy incorporates the effect of astrocytic endfeet on the blood vessel radii.
 In particular, AstroVascPy replicates the dynamics of the radius of a vessel due to vasodilation.
 
-AstroVascPy uses vascpy Point Graph representation to access vasculature database stored in h5 file (sonata format).
+AstroVascPy uses vascpy Point Graph representation to access the vasculature database stored in h5 file (sonata format).
 
 vascpy standardizes the api for the vasculature datasets.
-PointVasculature (PointGraph) representation is basically a composition of two pandas dataframes,
+PointVasculature (PointGraph) representation is basically a composition of two pandas data frames,
 one for node properties (x, y, z, radius, other...) and one for edge properties (start_node, end_node, other...).
+
+This code is based on a previous code developed by A. Arnaudon.
 
 ### Inputs
 - pointgraph vasculature
@@ -35,7 +37,7 @@ to install the AstroVascPy solver (+ all its dependencies) and set the environme
 **Remark**: Run this command every time before using the solver in order to set the environment correctly.
 
 Backend Solvers: `export BACKEND_SOLVER_BFS='petsc'` or `export BACKEND_SOLVER_BFS='scipy'`, the user can choose the backend solver for the linear systems.
-**Remark**: PETSc is inherently parallel, while SciPy not. Therefore, running the Blood Flow Solver with MPI makes sense only while using `petsc`!
+**Remark**: PETSc is inherently parallel, while SciPy is not. Therefore, running the Blood Flow Solver with MPI makes sense only while using `petsc`!
 
 Blood Flow Solver (BFS) debugging: By typing `export DEBUG_BFS=1`, we run both PETSc & SciPy, and we compare their results. To disable this behavior please type `export DEBUG_BFS=0` (default behavior).
 
