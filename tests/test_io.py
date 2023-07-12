@@ -16,8 +16,8 @@ TEST_DATA_DIR = TEST_DIR / "data"
 def test_petsc_installation():
     precision, indices, complex = get_conf()
     assert (
-        complex is True
-    ), "PETSc needs to be compiled with configure option --with-scalar-type=complex"
+        complex is False
+    ), "PETSc needs to be compiled with configure option --with-scalar-type=real"
 
 
 def test_load_graph():
