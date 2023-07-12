@@ -62,7 +62,7 @@ Here are the units of these entities:
 
 Stéphanie Battini, Nicola Cantarutti, Christos Kotsalos, Alexis Arnaudon
 
-Link to the article on Bio-arxiv: 
+Link to the article on Bio-arxiv:
 
 ## Funding and Acknowledgements
 
