@@ -1,3 +1,7 @@
 include:
 - project: molsys/ci
   file: /ci/pipelines/molsys.bloodflow.yml
+- project: hpc/gitlab-pipelines
+  file: github-project-pipelines.gitlab-ci.yml
+- project: hpc/gitlab-upload-logs
+  file: enable-upload.yml
