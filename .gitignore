@@ -6,6 +6,7 @@
 *py~
 *~
 *.egg-info
+examples/data/graphs_folder/dumped_graph.bin
 
 # Mac related stuff
 .DS_Store

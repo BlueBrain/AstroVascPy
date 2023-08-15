@@ -33,6 +33,8 @@ reqs = [
     "trimesh",
     "cython",
     "psutil",
+    "joblib",
+    "archngv",
 ]
 
 doc_reqs = [

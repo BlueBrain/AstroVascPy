@@ -64,7 +64,7 @@ then
         source python-venv/bin/activate
         python3 -m pip install --upgrade pip
     fi
-    pip3 install -e .
+    pip3 install --index-url https://bbpteam.epfl.ch/repository/devpi/bbprelman/dev/+simple/ -e .
     pip3 install tox
 else
     conda_bin=`conda info | grep "active env location" | grep -o "/.*"`/bin
