@@ -333,8 +333,6 @@ def array2distArray(v, Istart, Iend, dtype):
     return vloc
 
 
-# code from femstab
-# TODO: Use Scatterv
 def array2PETScVec(v):
     """
     Converts (copies) a sequential array/vector on process 0
@@ -347,7 +345,6 @@ def array2PETScVec(v):
         PETSc Vec distributed on all procs
     """
 
-    # v is (probably) only redefined on proc 0
     if MPI_RANK == 0:
         n = len(v)
         v = v.astype(PETSc.ScalarType)
@@ -365,31 +362,21 @@ def array2PETScVec(v):
 
     # slice of the global vector that belongs to this mpi rank (range: from -> to)
     nloc = iend - istart
-    # gather all ranges in rank 0, while in others the containers are None
-    Istart = MPI_COMM.gather(istart, root=0)
-    Iend = MPI_COMM.gather(iend, root=0)
+    # create a tuple of nloc in all ranks
+    Nloc = tuple(MPI_COMM.allgather(nloc))
+    # gather all ranges in a tuple, in every rank.
+    Istart = tuple(MPI_COMM.allgather(istart))
 
     # local vector
     vloc = np_zeros(nloc, PETSc.ScalarType)
 
-    if MPI_RANK == 0:
-        vloc[:nloc] = v[:nloc]
-
-    for iproc in range(1, MPI_SIZE):
-        if MPI_RANK == 0:
-            i0 = Istart[iproc]
-            i1 = Iend[iproc]
-            MPI_COMM.Send(v[i0:i1], dest=iproc, tag=77)
-        elif MPI_RANK == iproc:
-            MPI_COMM.Recv(vloc, source=0, tag=77)
-
+    # scatter the vector v on all ranks
+    MPI_COMM.Scatterv([v, Nloc, Istart, MPI.DOUBLE], vloc, root=0)  # MPIU_REAL
     x.setArray(vloc)
 
     return x
 
 
-# code from femstab
-# TODO: Use Gatherv
 def PETScVec2array(x):
     """
     Converts (copies) a distributed PETSc Vec to a sequential array on process 0
@@ -407,23 +394,14 @@ def PETScVec2array(x):
     istart, iend = x.getOwnershipRange()
 
     nloc = iend - istart
-    Istart = MPI_COMM.gather(istart, root=0)
-    Iend = MPI_COMM.gather(iend, root=0)
+    Nloc = tuple(MPI_COMM.allgather(nloc))
+    Istart = tuple(MPI_COMM.allgather(istart))
 
     if MPI_RANK == 0:
         v = np_zeros(n, PETSc.ScalarType)
     else:
         v = None
 
-    if MPI_RANK == 0:
-        v[:nloc] = vloc
-
-    for iproc in range(1, MPI_SIZE):
-        if MPI_RANK == 0:
-            i0 = Istart[iproc]
-            i1 = Iend[iproc]
-            MPI_COMM.Recv(v[i0:i1], source=iproc, tag=77)
-        elif MPI_RANK == iproc:
-            MPI_COMM.Send(vloc, dest=0, tag=77)
+    MPI_COMM.Gatherv(vloc, [v, Nloc, Istart, MPI.DOUBLE], root=0)  # MPIU_REAL
 
     return v
