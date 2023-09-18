@@ -15,7 +15,8 @@ import random
 import string
 
 from mpi4py import MPI
-from mpi4py.util.dtlib import from_numpy_dtype
+from numpy import concatenate
+from numpy import dtype
 from numpy import zeros as np_zeros
 from petsc4py import PETSc
 
@@ -24,6 +25,13 @@ from astrovascpy import PetscBinaryIO
 MPI_COMM = MPI.COMM_WORLD
 MPI_RANK = MPI_COMM.Get_rank()
 MPI_SIZE = MPI_COMM.Get_size()
+
+
+def _from_numpy_dtype(np_type):
+    """ Convert NumPy datatype to MPI datatype. """
+    dtype_var = dtype(np_type)
+    MPItype = MPI._typedict.get(dtype_var.char)
+    return MPItype
 
 
 def BinaryIO2PETScMat(L, file_name="tempMat.dat"):
@@ -207,21 +215,14 @@ def coomatrix2PETScMat(L):
     data_loc = np_zeros(nnzloc, PETSc.ScalarType)
 
     # For Scatterv
-    count_ = [
-        nnzloc,
-    ]
-    displ_ = [
-        0,
-    ]
+    displ_ = None
     if MPI_RANK == 0:
-        for i in range(1, MPI_SIZE):
-            count_.append(Nnzloc[i])
-            displ_.append(displ_[-1] + count_[-2])
+        displ_ = tuple(concatenate(([0], Nnzloc[:-1])).cumsum())
 
     # distribute the matrix across ranks (COO format) - populate local containers
-    MPI_COMM.Scatterv([row_, count_, displ_, from_numpy_dtype(PETSc.IntType)], row_loc, root=0)
-    MPI_COMM.Scatterv([col_, count_, displ_, from_numpy_dtype(PETSc.IntType)], col_loc, root=0)
-    MPI_COMM.Scatterv([data_, count_, displ_, from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0)
+    MPI_COMM.Scatterv([row_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], row_loc, root=0)
+    MPI_COMM.Scatterv([col_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], col_loc, root=0)
+    MPI_COMM.Scatterv([data_, Nnzloc, displ_, _from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0)
 
     for r, c, v in zip(row_loc, col_loc, data_loc):
         A[r, c] = v
@@ -315,22 +316,17 @@ def array2distArray(v, Istart, Iend, dtype):
     istart = MPI_COMM.scatter(Istart, root=0)
     iend = MPI_COMM.scatter(Iend, root=0)
     nloc = iend - istart
-
+    
+    Nloc = MPI_COMM.gather(nloc, root=0)
+    if MPI_RANK != 0:
+        Nloc = [0,]
+    
     # local vector
     vloc = np_zeros(nloc, dtype=dtype)
-
-    if MPI_RANK == 0:
-        vloc[:nloc] = v[:nloc]
-
-    for iproc in range(1, MPI_SIZE):
-        if MPI_RANK == 0:
-            i0 = Istart[iproc]
-            i1 = Iend[iproc]
-            MPI_COMM.Send(v[i0:i1], dest=iproc, tag=77)
-        elif MPI_RANK == iproc:
-            MPI_COMM.Recv(vloc, source=0, tag=77)
+    MPI_COMM.Scatterv([v, Nloc, Istart, _from_numpy_dtype(dtype)], vloc, root=0)
 
     return vloc
+
 
 
 def array2PETScVec(v):
@@ -362,16 +358,20 @@ def array2PETScVec(v):
 
     # slice of the global vector that belongs to this mpi rank (range: from -> to)
     nloc = iend - istart
-    # create a tuple of nloc in all ranks
-    Nloc = tuple(MPI_COMM.allgather(nloc))
-    # gather all ranges in a tuple, in every rank.
-    Istart = tuple(MPI_COMM.allgather(istart))
+    # gather nloc on rank zero
+    Nloc = MPI_COMM.gather(nloc, root=0)
+    if MPI_RANK != 0:
+        Nloc = [0,]
+    # gather istart on rank zero.
+    Istart = MPI_COMM.gather(istart, root=0)
+    if MPI_RANK != 0:
+        Istart = [0,]
 
     # local vector
     vloc = np_zeros(nloc, PETSc.ScalarType)
 
     # scatter the vector v on all ranks
-    MPI_COMM.Scatterv([v, Nloc, Istart, MPI.DOUBLE], vloc, root=0)  # MPIU_REAL
+    MPI_COMM.Scatterv([v, Nloc, Istart, _from_numpy_dtype(PETSc.ScalarType)], vloc, root=0)
     x.setArray(vloc)
 
     return x
@@ -394,14 +394,19 @@ def PETScVec2array(x):
     istart, iend = x.getOwnershipRange()
 
     nloc = iend - istart
-    Nloc = tuple(MPI_COMM.allgather(nloc))
-    Istart = tuple(MPI_COMM.allgather(istart))
+    Nloc = MPI_COMM.gather(nloc, root=0)
+    if MPI_RANK != 0:
+        Nloc = [0,]
+
+    Istart = MPI_COMM.gather(istart, root=0)
+    if MPI_RANK != 0:
+        Istart = [0,]
 
     if MPI_RANK == 0:
         v = np_zeros(n, PETSc.ScalarType)
     else:
         v = None
 
-    MPI_COMM.Gatherv(vloc, [v, Nloc, Istart, MPI.DOUBLE], root=0)  # MPIU_REAL
+    MPI_COMM.Gatherv(vloc, [v, Nloc, Istart, _from_numpy_dtype(PETSc.ScalarType)], root=0)
 
     return v
