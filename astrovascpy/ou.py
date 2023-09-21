@@ -58,28 +58,29 @@ def ornstein_uhlenbeck_process(
     return X
 
 
-def expected_time(kappa, r_max, Nspace=10000):  # pragma: no cover
-    """Calculate the expected time to reach r_max starting from x_0=0.
+def expected_time(kappa, x_max, C, Nspace=10000):  # pragma: no cover
+    """Calculate the expected time to reach x_max starting from x_0=0.
 
-        We assume that r_max = 2.8 sigma/ sqrt(2 kappa)
+        We assume that x_max = C sigma/ sqrt(2 kappa)
         The code solves the ODE:
             -kappa x U'(x) + 1/2 sigma^2 U''(x) = -1
-        with   U'(0)=0 and U(r_max) = 0
+        with   U'(0)=0 and U(x_max) = 0
         We use backward discretization for the first order derivative.
         Using the BC we get U(-1)=U(0) and U(N)=0.
         In matrix form, we solve:  DU = -1, with tri-diagonal matrix D.
 
     Args:
         kappa (float): mean reversion coefficient.
-        r_max (float): maximum value for the radius.
+        x_max (float): maximum value for the radius.
+        C (float): number of st dev distance from origin
         Nspace (int): number of discretization points.
 
     Returns:
         float: expected time.
     """
     x_0 = 0  # starting point of the OU process
-    sigma = r_max * np.sqrt(2 * kappa) / 2.8
-    x, dx = np.linspace(x_0, r_max, Nspace, retstep=True)  # space discretization
+    sigma = x_max * np.sqrt(2 * kappa) / C
+    x, dx = np.linspace(x_0, x_max, Nspace, retstep=True)  # space discretization
 
     U = np.zeros(Nspace)  # initialization of the solution
     constant_term = -np.ones(Nspace - 1)  # -1
@@ -102,12 +103,13 @@ def expected_time(kappa, r_max, Nspace=10000):  # pragma: no cover
     return U[0]
 
 
-def compute_OU_params(time, r_max):
+def compute_OU_params(time, x_max, c):
     """Zero finder function to compute the value of kappa and sigma.
 
     Args:
         time (float): simulation time.
-        r_max (float): maximum value for the radius.
+        x_max (float): maximum value for the radius.
+        c (float): number of st dev distance from origin
 
     Returns:
         tuple: (kappa, sigma)
@@ -122,12 +124,12 @@ def compute_OU_params(time, r_max):
         Returns:
             float: expected time.
         """
-        return time - expected_time(kappa, r_max)
+        return time - expected_time(kappa, x_max, c)
 
     x, r = scpo.brentq(obj_fun, a=1e-2, b=50, xtol=1e-8, rtol=1e-4, full_output=True)
     if r.converged:
         kappa = x
-        sigma = r_max * np.sqrt(2 * kappa) / 2.8
+        sigma = x_max * np.sqrt(2 * kappa) / c
         return kappa, sigma
 
     raise ValueError
