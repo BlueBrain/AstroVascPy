@@ -439,10 +439,12 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
 
     kappa_c = MPI_COMM.bcast(kappa_c, root=0)
     sigma_c = MPI_COMM.bcast(sigma_c, root=0)
-    sqrt_kappa_c = np.sqrt(2 * kappa_c)
+    if kappa_c is not None:
+        sqrt_kappa_c = np.sqrt(2 * kappa_c)
     kappa_a = MPI_COMM.bcast(kappa_a, root=0)
     sigma_a = MPI_COMM.bcast(sigma_a, root=0)
-    sqrt_kappa_a = np.sqrt(2 * kappa_a)
+    if kappa_a is not None:
+        sqrt_kappa_a = np.sqrt(2 * kappa_a)
 
     if graph is not None:
         radius_origin = graph.edge_properties.loc[:, "radius_origin"].to_numpy()

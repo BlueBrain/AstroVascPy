@@ -31,7 +31,7 @@ def edge_properties():
 
 def test_compute_edge_resistances():
     radii = np.array([1, 1.25])
-    resistances = tested.compute_edge_resistances(radii)
+    resistances = tested.compute_edge_resistances(radii, blood_viscosity=1.2e-6)
     npt.assert_allclose(resistances, np.array([2.18499354e-05, 4.95812750e-06]))
     with pytest.raises(BloodFlowError):
         tested.compute_edge_resistances(radii, blood_viscosity=-1)
@@ -42,7 +42,7 @@ def test_compute_edge_resistances():
 def test_set_edge_resistances(point_properties, edge_properties):
     graph = PointVasculature(point_properties, edge_properties)
     radii = np.array([1, 1.25])
-    resistances = tested.compute_edge_resistances(radii)
+    resistances = tested.compute_edge_resistances(radii, blood_viscosity=1.2e-6)
     utils.set_edge_data(graph)
     tested.set_edge_resistances(graph, blood_viscosity=1.2e-6, with_hematocrit=True)
     npt.assert_allclose(resistances, graph.edge_properties["resistances"])
@@ -200,16 +200,25 @@ def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
     nb_iteration = 100
     nb_iteration_noise = 2
     max_radius_ratio = 1.2
-    time_to_rmax = 3.3
     section_id = 0
     segment_id = 1
     endfoot_id = 1
     endfeet_length = 1.0
 
+    params = {
+        "blood_viscosity": 1.2e-6,
+        "p_base": 1.33e-3,
+        "threshold_r": 3,
+        "max_r_capill": 1.38,
+        "t_2_max_capill": 2.7,
+        "max_r_artery": 1.23,
+        "t_2_max_artery": 3.3,
+    }
+
     tested.set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length)
     radius_origin = tested.get_radius_at_endfoot(graph, endfoot_id)[:, 0]
     radii = tested.simulate_vasodilation_ou_process(
-        graph, dt, nb_iteration, nb_iteration_noise, max_radius_ratio, time_to_rmax
+        graph, dt, nb_iteration, nb_iteration_noise, params
     )
     # probability that the radii process crosses the max radius ratio
     proba_rad = np.count_nonzero(radii[0] >= radius_origin[0] * max_radius_ratio) / radii[0].size
@@ -228,8 +237,6 @@ def test_simulate_ou_process(point_properties, edge_properties):
     dt = 0.01
     nb_iteration = 100
     entry_nodes = np.array([0])
-    time_to_rmax = 1.0
-    max_radius_ratio = 1.35
     simulation_time = nb_iteration * dt
     relaxation_start = 1.0
     time_step = dt
@@ -240,21 +247,17 @@ def test_simulate_ou_process(point_properties, edge_properties):
     entry_speed = [1] * nb_iteration
 
     params = {
-        "n_workers": 1,
-        "compliance": 4.05,
-        "blood_density": 1.024e-12,
         "blood_viscosity": 1.2e-6,
+        "p_base": 1.33e-3,
+        "threshold_r": 3,
+        "max_r_capill": 1.38,
+        "t_2_max_capill": 2.7,
+        "max_r_artery": 1.23,
+        "t_2_max_artery": 3.3,
     }
     tested.set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length)
     flows, pressures, radiii = tested.simulate_ou_process(
-        graph,
-        entry_nodes,
-        max_radius_ratio,
-        time_to_rmax,
-        simulation_time,
-        relaxation_start,
-        time_step,
-        entry_speed,
+        graph, entry_nodes, simulation_time, relaxation_start, time_step, entry_speed, params
     )
     assert radiii.shape == (nb_iteration, 2)
     assert flows.shape == (nb_iteration, 2)
@@ -320,7 +323,7 @@ def test_compute_static_laplacian():
     graph = PointVasculature(point_properties, edge_properties)
     utils.set_edge_data(graph)
 
-    laplacian = tested.compute_static_laplacian(graph).toarray()
+    laplacian = tested.compute_static_laplacian(graph, blood_viscosity=1.2e-6).toarray()
 
     npt.assert_allclose(
         laplacian,
@@ -421,7 +424,7 @@ def test_update_static_flow_pressure():
     input_flow = len(entry_nodes) * [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=1.2e-6, with_hematocrit=True
+        graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
     )
     npt.assert_allclose(
         graph.edge_properties["flow"],
@@ -469,7 +472,7 @@ def test_total_flow_conservation_in_graph():
     )
 
     tested.update_static_flow_pressure(
-        graph, boundary_flows, blood_viscosity=1.2e-6, with_hematocrit=True
+        graph, boundary_flows, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
     )
     flow = graph.edge_properties["flow"].values
 
@@ -533,7 +536,9 @@ def test_conservation_flow():
     input_flow = len(entry_nodes) * [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
 
-    tested.update_static_flow_pressure(graph, boundary_flow)
+    tested.update_static_flow_pressure(
+        graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3
+    )
     flow = graph.edge_properties["flow"]
     npt.assert_allclose(
         flow[0],
