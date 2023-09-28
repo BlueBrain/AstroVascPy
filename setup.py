@@ -35,6 +35,7 @@ reqs = [
     "trimesh",
     "cython",
     "mpi4py",
+    "petsc4py",
     "psutil",
 ]
 

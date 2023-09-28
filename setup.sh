@@ -64,7 +64,7 @@ then
     else
         python3 -m venv --prompt astrovascpy python-venv
         source python-venv/bin/activate
-        python3 -m pip install --upgrade pip
+        python3 -m pip install --upgrade pip==23.0.1
     fi
     pip3 install -e .
 else
