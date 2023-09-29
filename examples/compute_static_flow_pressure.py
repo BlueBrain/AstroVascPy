@@ -91,7 +91,12 @@ PETSc.Sys.Print("end of input flow")
 PETSc.Sys.Print("compute static flow")
 
 with mpi_timer.region("compute static flow"), mpi_mem.region("compute static flow"):
-    bloodflow.update_static_flow_pressure(graph, boundary_flow)
+    bloodflow.update_static_flow_pressure(
+        graph,
+        boundary_flow,
+        blood_viscosity=params["blood_viscosity"],
+        base_pressure=params["p_base"],
+    )
 
 PETSc.Sys.Print("end of static flow pressure")
 

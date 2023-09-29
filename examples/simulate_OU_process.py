@@ -45,9 +45,11 @@ save_sonata = True
 # The variable 'relaxation_start' is defined together with the other simulation variables.
 RELAXATION = False  # True
 
-params = yaml.full_load(open(str(PurePath("data/params.yaml"))))
+# params = yaml.full_load(open(str(PurePath("data/params.yaml"))))
+curr_dir = Path(__file__).resolve().parent
+params = yaml.full_load(open(str(curr_dir / "data/params.yaml")))
 
-output_path = Path(params["output_folder"])
+output_path = Path(curr_dir / params["output_folder"])
 
 if MPI_RANK == 0 and not output_path.exists():
     output_path.mkdir()
@@ -55,10 +57,10 @@ if MPI_RANK == 0 and not output_path.exists():
 ############################################################################################
 PETSc.Sys.Print("loading circuit")
 
-node_dataset = "./data/graphs_folder/node_dataset.csv"
-edge_dataset = "./data/graphs_folder/edge_dataset.csv"
-graph_sonata = "./data/graphs_folder/toy_graph.h5"
-graph_bin = "./data/graphs_folder/toy_graph.bin"
+node_dataset = curr_dir / "data/graphs_folder/node_dataset.csv"
+edge_dataset = curr_dir / "data/graphs_folder/edge_dataset.csv"
+graph_sonata = curr_dir / "data/graphs_folder/toy_graph.h5"
+graph_bin = curr_dir / "data/graphs_folder/toy_graph.bin"
 
 with mpi_timer.region("loading circuit"), mpi_mem.region("loading circuit"):
     graph = load_graph_from_csv(node_filename=node_dataset, edge_filename=edge_dataset)
@@ -80,9 +82,7 @@ PETSc.Sys.Print("entry nodes: ", entry_nodes)
 
 PETSc.Sys.Print("simulate astrovascpy")
 
-max_radius_ratio = 1.38
-time_to_rmax = 2.7
-simulation_time = 0.02  # seconds
+simulation_time = 5  # seconds
 time_step = 0.01
 if RELAXATION:
     relaxation_start = 3.0  # relaxation starting time
@@ -99,14 +99,7 @@ else:
 
 with mpi_timer.region("simulate astrovascpy"), mpi_mem.region("simulate astrovascpy"):
     flows, pressures, radiii = simulate_ou_process(
-        graph,
-        entry_nodes,
-        max_radius_ratio,
-        time_to_rmax,
-        simulation_time,
-        relaxation_start,
-        time_step,
-        entry_speed,
+        graph, entry_nodes, simulation_time, relaxation_start, time_step, entry_speed, params
     )
 
 if graph is not None:
@@ -121,7 +114,7 @@ if graph is not None:
 
 if graph is not None:
     if save_sonata:
-        sonata_path = Path(params["output_folder"]) / "sonata_files"
+        sonata_path = Path(curr_dir / params["output_folder"]) / "sonata_files"
         if not sonata_path.exists():
             Path.mkdir(sonata_path)
         print("start sonata reporting", flush=True)
@@ -140,7 +133,7 @@ if graph is not None:
             flows,
             pressures,
             radiii,
-            np.power(radiii, 2) * np.pi * graph.edge_properties["length"].values,
+            np.power(radiii, 2) * np.pi * graph.edge_properties["length"].to_numpy(),
         )
         print("end of sonata reporting", flush=True)
 

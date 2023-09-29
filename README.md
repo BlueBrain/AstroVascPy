@@ -11,8 +11,6 @@ vascpy standardizes the api for the vasculature datasets.
 PointVasculature (PointGraph) representation is basically a composition of two pandas data frames,
 one for node properties (x, y, z, radius, other...) and one for edge properties (start_node, end_node, other...).
 
-This code is based on a previous code developed by A. Arnaudon.
-
 ### Inputs
 - pointgraph vasculature
 - endfeet locations with corresponding ids

@@ -1,6 +1,6 @@
 dataset: 'toy_graph'
 
-data_folder: './data/graphs_folder/'
+data_folder: 'data/graphs_folder/'
 output_folder: 'output'
 
 blood_viscosity: 1.2e-6 # plasma viscosity in g.µm^-1.s^-1
@@ -10,3 +10,18 @@ max_nb_inputs: 3 # maximum number of inputs to inject flow/pressure into vascula
 vasc_axis: 1  # vasculature axis corresponding to x, y, or z. Should be set to 0, 1, or 2.
 
 p_base: 1.33e-3  # reference pressure. At resting state equal to the external pressure
+
+
+### OU calibration parameters
+
+threshold_r: 3  # max radius for capillaries
+
+# Capillaries
+max_r_capill: 1.38   # max radius change factor
+mean_r_capill: 1.09  # mean radius change factor
+t_2_max_capill: 2.7  # time to reach r_max from 0
+
+# Arteries
+max_r_artery: 1.23   # max radius change factor
+mean_r_artery: 1.11  # mean radius change factor
+t_2_max_artery: 3.3  # time to reach r_max from 0

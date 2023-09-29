@@ -50,14 +50,10 @@ MPI_SIZE = MPI_COMM.Get_size()
 
 L = logging.getLogger(__name__)
 
-BLOOD_VISCOSITY = 1.2e-6
-P_BASE = 1.33e-3
-
 FLOAT = np.float64
-COMPLEX = np.complex128
 
 
-def compute_static_laplacian(graph, blood_viscosity=BLOOD_VISCOSITY, with_hematocrit=True):
+def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
     """Compute the time-independent Laplacian.
 
     Args:
@@ -84,9 +80,9 @@ def compute_static_laplacian(graph, blood_viscosity=BLOOD_VISCOSITY, with_hemato
 def update_static_flow_pressure(
     graph,
     input_flow,
-    blood_viscosity=BLOOD_VISCOSITY,
+    blood_viscosity,
+    base_pressure,
     with_hematocrit=True,
-    base_pressure=P_BASE,
 ):
     """Compute the time-independent pressure and flow.
 
@@ -94,8 +90,8 @@ def update_static_flow_pressure(
         graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         input_flow(numpy.array): input flow for each graph node (complex numbers).
         blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
-        with_hematocrit (bool): consider hematrocrit for resistance model
         base_pressure (float): minimum pressure in the output edges
+        with_hematocrit (bool): consider hematrocrit for resistance model
     """
     if graph is not None:
         entry_flow = input_flow[input_flow > 0]
@@ -131,7 +127,7 @@ def update_static_flow_pressure(
         graph.node_properties["pressure"] = pressure
 
 
-def compute_edge_resistances(radii, blood_viscosity=BLOOD_VISCOSITY, with_hematocrit=True):
+def compute_edge_resistances(radii, blood_viscosity, with_hematocrit=True):
     """Compute the resistances as a function of radii.
 
     Args:
@@ -159,7 +155,7 @@ def compute_edge_resistances(radii, blood_viscosity=BLOOD_VISCOSITY, with_hemato
     return resistances.astype(FLOAT)
 
 
-def set_edge_resistances(graph, blood_viscosity=BLOOD_VISCOSITY, with_hematocrit=True):
+def set_edge_resistances(graph, blood_viscosity, with_hematocrit=True):
     """Set the edge resistances on graph.edge_properties.
 
     Args:
@@ -242,11 +238,11 @@ def get_radius_at_endfoot(graph, endfoot_id):
     Raises:
         BloodFlowError: if endfoot_id does not correspond to a real endfoot id in the graph.
     """
-    if endfoot_id not in list(graph.edge_properties.endfeet_id.values):
+    if endfoot_id not in list(graph.edge_properties.endfeet_id.to_numpy()):
         raise BloodFlowError("The endfoot_id must correspond to a real endfoot id in the graph.")
     return graph.edge_properties.loc[
         graph.edge_properties.endfeet_id == endfoot_id, ["radius", "radius_origin"]
-    ].values
+    ].to_numpy()
 
 
 def set_radii_at_endfeet(graph, endfeet_radii):
@@ -392,9 +388,7 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
         return None
 
 
-def simulate_vasodilation_ou_process(
-    graph, dt, nb_iteration, nb_iteration_noise, max_radius_ratio=1.2, time_to_rmax=3.3
-):
+def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise, params):
     """Simulate vasodilation according to the Ornstein-Uhlenbeck process.
 
     Args:
@@ -402,8 +396,8 @@ def simulate_vasodilation_ou_process(
         dt (float): time-step.
         nb_iteration (int): number of iteration.
         nb_iteration_noise (int): number of time steps with non-zero noise.
-        max_radius_ratio (float): max radius change that can be applied to the vasculature.
-        time_to_rmax (float): time (s) to reach the max_radius
+        params (dict): general parameters for vasculature.
+
 
     Returns:
         np.array: (endfeet_id, time-step, nb_of_edge_per_endfoot) array where each edge
@@ -411,17 +405,46 @@ def simulate_vasodilation_ou_process(
     """
     radii_at_endfeet = []  # matrix: rows = number of radii, columns = time points
 
-    if graph is not None:
-        r_max = graph.edge_properties["radius_origin"].iloc[0] * max_radius_ratio
-        kappa, sigma = ou.compute_OU_params(
-            time_to_rmax, r_max - graph.edge_properties["radius_origin"].iloc[0]
-        )
-    else:
-        kappa, sigma = None, None
+    # constant c for capillaries and arteries
+    c_cap = 2.8
+    c_art = 2.8
 
-    kappa = MPI_COMM.bcast(kappa, root=0)
-    sigma = MPI_COMM.bcast(sigma, root=0)
-    sqrt_kappa = np.sqrt(2 * kappa)
+    # Uncomment the following if we want to fit the mean value.
+    # Remark:  it is not possible to fit mean value and max value at same time
+    # c_cap = np.sqrt(2/np.pi) * (params["max_r_capill"] - 1) / (params["mean_r_capill"] - 1)
+    # c_art = np.sqrt(2/np.pi) * (params["max_r_artery"] - 1) / (params["mean_r_artery"] - 1)
+
+    kappa_c, sigma_c = None, None
+    kappa_a, sigma_a = None, None
+
+    if graph is not None:
+        ge = graph.edge_properties["radius_origin"]
+        # calibrate kappa for capillaries
+        # We calibrate only for the first radius.
+        try:
+            r0_c = ge[ge <= params["threshold_r"]].iloc[0]
+            x_max_c = r0_c * (params["max_r_capill"] - 1)
+            kappa_c, sigma_c = ou.compute_OU_params(params["t_2_max_capill"], x_max_c, c_cap)
+        except IndexError:
+            kappa_c = None
+        print("kappa for capillaries: ", kappa_c)
+        # calibrate kappa for arteries
+        try:
+            r0_a = ge[ge > params["threshold_r"]].iloc[0]
+            x_max_a = r0_a * (params["max_r_artery"] - 1)
+            kappa_a, sigma_a = ou.compute_OU_params(params["t_2_max_artery"], x_max_a, c_art)
+        except IndexError:
+            kappa_a = None
+        print("kappa for arteries: ", kappa_a)
+
+    kappa_c = MPI_COMM.bcast(kappa_c, root=0)
+    sigma_c = MPI_COMM.bcast(sigma_c, root=0)
+    if kappa_c is not None:
+        sqrt_kappa_c = np.sqrt(2 * kappa_c)
+    kappa_a = MPI_COMM.bcast(kappa_a, root=0)
+    sigma_a = MPI_COMM.bcast(sigma_a, root=0)
+    if kappa_a is not None:
+        sqrt_kappa_a = np.sqrt(2 * kappa_a)
 
     if graph is not None:
         radius_origin = graph.edge_properties.loc[:, "radius_origin"].to_numpy()
@@ -443,8 +466,15 @@ def simulate_vasodilation_ou_process(
         if endfeet_id_ == -1:
             continue
 
-        r_max = radius_origin_ * max_radius_ratio
-        sigma = (r_max - radius_origin_) * sqrt_kappa / 2.8
+        if radius_origin_ <= params["threshold_r"]:
+            x_max = radius_origin_ * (params["max_r_capill"] - 1)
+            kappa = kappa_c
+            sigma = x_max * sqrt_kappa_c / c_cap
+        else:
+            x_max = radius_origin_ * (params["max_r_artery"] - 1)
+            kappa = kappa_a
+            sigma = x_max * sqrt_kappa_a / c_art
+
         radii_process = radius_origin_ + ou.ornstein_uhlenbeck_process(
             kappa, sigma, dt, nb_iteration, nb_iteration_noise, seed
         )
@@ -481,14 +511,7 @@ def simulate_vasodilation_ou_process(
 
 
 def simulate_ou_process(
-    graph,
-    entry_nodes,
-    max_radius_ratio,
-    time_to_rmax,
-    simulation_time,
-    relaxation_start,
-    time_step,
-    entry_speed,
+    graph, entry_nodes, simulation_time, relaxation_start, time_step, entry_speed, params
 ):
     """Update value according to the reflected Ornstein-Ulenbeck.
 
@@ -496,18 +519,20 @@ def simulate_ou_process(
         graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         params (dict): general parameters for vasculature.
         entry_nodes (numpy.array:): (nb_entry_nodes,) ids of entry_nodes.
-        max_radius_ratio (float): max radius change that can be applied to the vasculature.
-        time_to_rmax (float): time to reach r_max from 0.
         simulation_time (float): total time of the simulation, in seconds.
         relaxation_start (float): time at which the noise is set to zero.
         time_step (float): size of the time-step.
         entry_speed (numpy.array); speed vector on the entry nodes.
+        params (dict): general parameters for vasculature.
 
     Returns:
         numpy.array: (nb_iteration, n_edges) flow values at each time-step for each edge,
         numpy.array: (nb_iteration, n_nodes) pressure values at each time-step for each edge,
         numpy.array: (nb_iteration, n_edges) radius values at each time-step for each edge.
     """
+
+    BLOOD_VISCOSITY = params["blood_viscosity"]
+    P_BASE = params["p_base"]
 
     nb_iteration = round(simulation_time / time_step)
     # nb_iteration_noise = number of time_steps before relaxation starts:
@@ -524,7 +549,7 @@ def simulate_ou_process(
         "simulate_vasodilation_ou_process"
     ):
         radii = simulate_vasodilation_ou_process(
-            graph, time_step, nb_iteration, nb_iteration_noise, max_radius_ratio, time_to_rmax
+            graph, time_step, nb_iteration, nb_iteration_noise, params
         )
 
     if graph is not None:
@@ -548,16 +573,15 @@ def simulate_ou_process(
             if radii is not None:
                 graph.edge_properties.loc[end_df.index, "radius"] = radii[:, time_it]
 
-            radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].values
+            radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].to_numpy()
             input_flows = entry_speed[time_it] * np.pi * radii_at_entry_edges**2
         else:
             input_flows = None
 
-        PETSc.Sys.Print("-> PETSc ITERATION TIME: ", time_it)
         # Compute nodes of degree 1 where blood flows out
         boundary_flow = boundary_flows_A_based(graph, entry_nodes, input_flows)
 
-        update_static_flow_pressure(graph, boundary_flow)
+        update_static_flow_pressure(graph, boundary_flow, BLOOD_VISCOSITY, P_BASE)
 
         if graph is not None:
             flows[time_it] = graph.edge_properties["flow"]
