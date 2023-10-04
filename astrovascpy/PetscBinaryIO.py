@@ -65,7 +65,7 @@ def get_conf():
         except importlib.metadata.PackageNotFoundError:
             try:
                 petsc4py = importlib.metadata.distribution("petsc4py")
-                if "conda" in str(petsc4py.files[0].locate()):
+                if "conda" or "tox" in str(petsc4py.files[0].locate()):
                     petscdir = os.environ["CONDA_PREFIX"]
                 else:
                     raise importlib.metadata.PackageNotFoundError

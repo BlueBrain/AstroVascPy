@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-import argparse
 import sys
 from functools import partial
 from pathlib import Path
-from pathlib import PurePath
 
 import numpy as np
 import petsc4py
@@ -13,12 +11,12 @@ import yaml
 from mpi4py import MPI
 from petsc4py import PETSc
 
-import astrovascpy.utils
 from astrovascpy.bloodflow import generate_endfeet
 from astrovascpy.bloodflow import simulate_ou_process
-from astrovascpy.io import load_graph_from_bin
+
+# from astrovascpy.io import load_graph_from_bin
+# from astrovascpy.io import load_graph_from_h5
 from astrovascpy.io import load_graph_from_csv
-from astrovascpy.io import load_graph_from_h5
 from astrovascpy.report_writer import write_simulation_report
 from astrovascpy.utils import create_entry_largest_nodes
 from astrovascpy.utils import create_input_speed
@@ -45,7 +43,6 @@ save_sonata = True
 # The variable 'relaxation_start' is defined together with the other simulation variables.
 RELAXATION = False  # True
 
-# params = yaml.full_load(open(str(PurePath("data/params.yaml"))))
 curr_dir = Path(__file__).resolve().parent
 params = yaml.full_load(open(str(curr_dir / "data/params.yaml")))
 
@@ -66,7 +63,7 @@ with mpi_timer.region("loading circuit"), mpi_mem.region("loading circuit"):
     graph = load_graph_from_csv(node_filename=node_dataset, edge_filename=edge_dataset)
     # Uncomment the following if you want to import with different methods
     #
-    # # graph = load_graph_from_h5(filename=graph_sonata)
+    # graph = load_graph_from_h5(filename=graph_sonata)
     # graph = load_graph_from_bin(graph_bin)
 
 GEN_ENDFEET = True
