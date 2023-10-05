@@ -34,6 +34,7 @@ else
             fi
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
+            conda install -y -c conda-forge tox tox-conda
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
         fi
