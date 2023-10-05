@@ -6,6 +6,14 @@ if command -v module &> /dev/null
 then
     module purge
     module load unstable git python gcc hpe-mpi petsc py-petsc4py
+
+    if [[ $OSTYPE == 'darwin'* ]];
+    then
+        sed -i '' 's/requires/#requires/g' tox.ini
+    else
+        sed -i 's/requires/#requires/g' tox.ini
+    fi
+
 else
     if command -v conda &> /dev/null
     then
