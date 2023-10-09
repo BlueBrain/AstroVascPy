@@ -40,8 +40,7 @@ else
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
 
             #  Environment variables
-            export PYTHONPATH="$CONDA_PREFIX/lib/python3.10/site-packages"
-            unset PETSC_DIR
+            export PYTHONPATH=`$CONDA_PREFIX/bin/python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'`
         fi
     else
         echo
