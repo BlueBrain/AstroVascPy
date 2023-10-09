@@ -6,6 +6,7 @@ if command -v module &> /dev/null
 then
     module purge
     module load unstable git python gcc hpe-mpi petsc py-petsc4py
+
 else
     if command -v conda &> /dev/null
     then
@@ -34,8 +35,12 @@ else
             fi
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
+            "$CONDA_PREFIX/bin/pip" install tox
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
+
+            #  Environment variables
+            export PYTHONPATH=`$CONDA_PREFIX/bin/python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'`:$PYTHONPATH
         fi
     else
         echo
