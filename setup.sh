@@ -30,16 +30,18 @@ else
             if [[ $OSTYPE == 'darwin'* ]];
             then
                 sed -i '' 's/"mpi4py"/#"mpi4py"/g' setup.py
-                sed -i '' 's/#requires/requires/g' tox.ini
             else
                 sed -i 's/"mpi4py"/#"mpi4py"/g' setup.py
-                sed -i 's/#requires/requires/g' tox.ini
             fi
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
-            conda install -y -c conda-forge tox tox-conda
+            pip install tox
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
+
+            #  Environment variables
+            export PYTHONPATH="$CONDA_PREFIX/lib/python3.10/site-packages"
+            unset PETSC_DIR
         fi
     else
         echo
