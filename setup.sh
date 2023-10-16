@@ -38,10 +38,10 @@ else
             "$CONDA_PREFIX/bin/pip" install tox
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
-
-            #  Environment variables
-            export PYTHONPATH=`$CONDA_PREFIX/bin/python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])'`:$PYTHONPATH
         fi
+        #  Environment variables
+        CONDA_PACKAGES=$($CONDA_PREFIX/bin/python3 -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])')
+        export PYTHONPATH=$CONDA_PACKAGES:$PYTHONPATH
     else
         echo
         echo "Please install Conda, and then proceed to the installation of AstroVascPy."
