@@ -48,7 +48,7 @@ def test_numpy_array2petsc():
 
 
 @pytest.mark.mpi(min_size=2)
-def test_scipy_coo2petsc():
+def test_scipy2petsc_conversion():
     """Test that the conversion from scipy sparse coo to petsc arrays works as expected"""
 
     def create_sparse_coo(m, n, seed=33):
