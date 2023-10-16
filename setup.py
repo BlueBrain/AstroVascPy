@@ -51,6 +51,7 @@ test_reqs = [
     "pytest-click",
     "pytest-cov",
     "pytest-html",
+    "pytest-mpi",
 ]
 
 setup(
