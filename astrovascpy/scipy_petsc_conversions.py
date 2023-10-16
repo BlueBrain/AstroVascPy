@@ -19,6 +19,7 @@ from numpy import concatenate
 from numpy import dtype
 from numpy import zeros as np_zeros
 from petsc4py import PETSc
+from scipy.sparse import csr_matrix
 
 from astrovascpy import PetscBinaryIO
 
@@ -28,7 +29,7 @@ MPI_SIZE = MPI_COMM.Get_size()
 
 
 def _from_numpy_dtype(np_type):
-    """ Convert NumPy datatype to MPI datatype. """
+    """Convert NumPy datatype to MPI datatype."""
     dtype_var = dtype(np_type)
     MPItype = MPI._typedict.get(dtype_var.char)
     return MPItype
@@ -222,7 +223,9 @@ def coomatrix2PETScMat(L):
     # distribute the matrix across ranks (COO format) - populate local containers
     MPI_COMM.Scatterv([row_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], row_loc, root=0)
     MPI_COMM.Scatterv([col_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], col_loc, root=0)
-    MPI_COMM.Scatterv([data_, Nnzloc, displ_, _from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0)
+    MPI_COMM.Scatterv(
+        [data_, Nnzloc, displ_, _from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0
+    )
 
     for r, c, v in zip(row_loc, col_loc, data_loc):
         A[r, c] = v
@@ -316,17 +319,16 @@ def array2distArray(v, Istart, Iend, dtype):
     istart = MPI_COMM.scatter(Istart, root=0)
     iend = MPI_COMM.scatter(Iend, root=0)
     nloc = iend - istart
-    
+
     Nloc = MPI_COMM.gather(nloc, root=0)
     if MPI_RANK != 0:
-        Nloc = [0,]
-    
+        Nloc = [0]
+
     # local vector
     vloc = np_zeros(nloc, dtype=dtype)
     MPI_COMM.Scatterv([v, Nloc, Istart, _from_numpy_dtype(dtype)], vloc, root=0)
 
     return vloc
-
 
 
 def array2PETScVec(v):
@@ -361,11 +363,11 @@ def array2PETScVec(v):
     # gather nloc on rank zero
     Nloc = MPI_COMM.gather(nloc, root=0)
     if MPI_RANK != 0:
-        Nloc = [0,]
+        Nloc = [0]
     # gather istart on rank zero.
     Istart = MPI_COMM.gather(istart, root=0)
     if MPI_RANK != 0:
-        Istart = [0,]
+        Istart = [0]
 
     # local vector
     vloc = np_zeros(nloc, PETSc.ScalarType)
@@ -396,11 +398,11 @@ def PETScVec2array(x):
     nloc = iend - istart
     Nloc = MPI_COMM.gather(nloc, root=0)
     if MPI_RANK != 0:
-        Nloc = [0,]
+        Nloc = [0]
 
     Istart = MPI_COMM.gather(istart, root=0)
     if MPI_RANK != 0:
-        Istart = [0,]
+        Istart = [0]
 
     if MPI_RANK == 0:
         v = np_zeros(n, PETSc.ScalarType)
@@ -410,3 +412,45 @@ def PETScVec2array(x):
     MPI_COMM.Gatherv(vloc, [v, Nloc, Istart, _from_numpy_dtype(PETSc.ScalarType)], root=0)
 
     return v
+
+
+def PETScMat2coo(A):
+    """
+    Converts a distributed PETSc sparse matrice to a scipy coo
+    sparse matrix on process 0
+
+    Args:
+        A: PETSc Mat distributed on all procs
+
+    Returns:
+        scipy coo sparse matrix on proc 0
+    """
+
+    indptr_loc, indices_loc, data_loc = A.getValuesCSR()
+    m, n = A.getSize()
+
+    # gatered values
+    Iptr_gat = MPI_COMM.gather(indptr_loc, root=0)
+    Ind_gat = MPI_COMM.gather(indices_loc, root=0)
+    Data_gat = MPI_COMM.gather(data_loc, root=0)
+
+    if MPI_RANK == 0:
+        data = concatenate(Data_gat)
+        indices = concatenate(Ind_gat)
+
+        # reconstruct the indptr array
+        indptr = np_zeros(shape=m + 1)
+        ind = 1
+        offset = 0
+        for array in Iptr_gat:
+            last_elem_ind = len(array) - 2
+            for i, elem in enumerate(array[1:]):
+                indptr[ind] = offset + elem
+                if i == last_elem_ind:
+                    offset = indptr[ind]
+                ind += 1
+
+        matrix_csr = csr_matrix((data, indices, indptr), shape=(m, n))
+        return matrix_csr.tocoo()
+    else:
+        return None
