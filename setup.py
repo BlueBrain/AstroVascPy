@@ -46,11 +46,7 @@ doc_reqs = [
 ]
 
 test_reqs = [
-    "mock",
     "pytest",
-    "pytest-click",
-    "pytest-cov",
-    "pytest-html",
     "pytest-mpi",
 ]
 
