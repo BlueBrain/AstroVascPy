@@ -235,7 +235,7 @@ def coomatrix2PETScMat(L):
     return A
 
 
-def coomatrix2PETScMat_naive(L):
+def coomatrix2PETScMat_naive(L):  # pragma: no cover
     """
     Converts a sequential scipy sparse matrix (on process 0) to a PETSc
     Mat ('aij') matrix distributed on all processes
@@ -310,7 +310,7 @@ def coomatrix2PETScMat_naive(L):
     return A
 
 
-def array2distArray(v, Istart, Iend, dtype):
+def array2distArray(v, Istart, Iend, dtype):  # pragma: no cover
     """
     Distributes an array in process 0 across ranks.
     Every rank gets a slice of the array.
