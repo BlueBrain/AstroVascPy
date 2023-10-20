@@ -31,8 +31,12 @@ MPI_SIZE = MPI_COMM.Get_size()
 def _from_numpy_dtype(np_type):
     """Convert NumPy datatype to MPI datatype."""
     dtype_var = dtype(np_type)
-    MPItype = MPI._typedict.get(dtype_var.char)
-    return MPItype
+    char_d = dtype_var.char
+    mpi_type = MPI._typedict.get(char_d)
+    if mpi_type is None:
+        raise RuntimeError(f"Char '{char_d}' not found in _typedict")
+    else:
+        return mpi_type
 
 
 def BinaryIO2PETScMat(L, file_name="tempMat.dat"):
@@ -194,21 +198,21 @@ def coomatrix2PETScMat(L):
     istart, iend = A.getOwnershipRange()
 
     # gather all ranges in rank 0 (None for the other ranks)
-    Istart = MPI_COMM.gather(istart, root=0)
-    Iend = MPI_COMM.gather(iend, root=0)
+    istart_loc = MPI_COMM.gather(istart, root=0)
+    iend_loc = MPI_COMM.gather(iend, root=0)
 
     nnzloc = None
     if MPI_RANK == 0:
-        Nnzloc = np_zeros(MPI_SIZE, PETSc.IntType)
+        nnzloc_0 = np_zeros(MPI_SIZE, PETSc.IntType)
         for i in range(MPI_SIZE):
-            # Ai encodes the total number of nonzeros above row Istart[i] and Iend[i]
+            # Ai encodes the total number of nonzeros above row istart_loc[i] and iend_loc[i]
             # how many non-zero elements for rank i
-            Nnzloc[i] = Ai[Iend[i]] - Ai[Istart[i]]
+            nnzloc_0[i] = Ai[iend_loc[i]] - Ai[istart_loc[i]]
     else:
-        Nnzloc = None
+        nnzloc_0 = None
 
     # every rank gets the corresponding number (from vector to number)
-    nnzloc = MPI_COMM.scatter(Nnzloc, root=0)
+    nnzloc = MPI_COMM.scatter(nnzloc_0, root=0)
 
     # distribute the matrix across ranks (COO format) - create local containers
     row_loc = np_zeros(nnzloc, PETSc.IntType)
@@ -218,13 +222,13 @@ def coomatrix2PETScMat(L):
     # For Scatterv
     displ_ = None
     if MPI_RANK == 0:
-        displ_ = tuple(concatenate(([0], Nnzloc[:-1])).cumsum())
+        displ_ = tuple(concatenate(([0], nnzloc_0[:-1])).cumsum())
 
     # distribute the matrix across ranks (COO format) - populate local containers
-    MPI_COMM.Scatterv([row_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], row_loc, root=0)
-    MPI_COMM.Scatterv([col_, Nnzloc, displ_, _from_numpy_dtype(PETSc.IntType)], col_loc, root=0)
+    MPI_COMM.Scatterv([row_, nnzloc_0, displ_, _from_numpy_dtype(PETSc.IntType)], row_loc, root=0)
+    MPI_COMM.Scatterv([col_, nnzloc_0, displ_, _from_numpy_dtype(PETSc.IntType)], col_loc, root=0)
     MPI_COMM.Scatterv(
-        [data_, Nnzloc, displ_, _from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0
+        [data_, nnzloc_0, displ_, _from_numpy_dtype(PETSc.ScalarType)], data_loc, root=0
     )
 
     for r, c, v in zip(row_loc, col_loc, data_loc):
@@ -290,17 +294,17 @@ def coomatrix2PETScMat_naive(L):  # pragma: no cover
     V.destroy()
 
     # gather all ranges in rank 0, while in others the containers are None
-    Istart = MPI_COMM.gather(istart, root=0)
-    Iend = MPI_COMM.gather(iend, root=0)
+    istart_loc = MPI_COMM.gather(istart, root=0)
+    iend_loc = MPI_COMM.gather(iend, root=0)
 
     # distributed containers
     row_loc = PETSc.IS().createGeneral(
-        array2distArray(row_, Istart, Iend, PETSc.IntType), comm=PETSc.COMM_SELF
+        array2distArray(row_, istart_loc, iend_loc, PETSc.IntType), comm=PETSc.COMM_SELF
     )
     col_loc = PETSc.IS().createGeneral(
-        array2distArray(col_, Istart, Iend, PETSc.IntType), comm=PETSc.COMM_SELF
+        array2distArray(col_, istart_loc, iend_loc, PETSc.IntType), comm=PETSc.COMM_SELF
     )
-    data_loc = array2distArray(data_, Istart, Iend, PETSc.ScalarType)
+    data_loc = array2distArray(data_, istart_loc, iend_loc, PETSc.ScalarType)
 
     for r, c, d in zip(row_loc.getIndices(), col_loc.getIndices(), data_loc):
         A[r, c] = d
@@ -310,23 +314,23 @@ def coomatrix2PETScMat_naive(L):  # pragma: no cover
     return A
 
 
-def array2distArray(v, Istart, Iend, dtype):  # pragma: no cover
+def array2distArray(v, istart_loc, iend_loc, dtype):  # pragma: no cover
     """
     Distributes an array in process 0 across ranks.
     Every rank gets a slice of the array.
     """
 
-    istart = MPI_COMM.scatter(Istart, root=0)
-    iend = MPI_COMM.scatter(Iend, root=0)
+    istart = MPI_COMM.scatter(istart_loc, root=0)
+    iend = MPI_COMM.scatter(iend_loc, root=0)
     nloc = iend - istart
 
-    Nloc = MPI_COMM.gather(nloc, root=0)
+    nloc_loc = MPI_COMM.gather(nloc, root=0)
     if MPI_RANK != 0:
-        Nloc = [0]
+        nloc_loc = [0]
 
     # local vector
     vloc = np_zeros(nloc, dtype=dtype)
-    MPI_COMM.Scatterv([v, Nloc, Istart, _from_numpy_dtype(dtype)], vloc, root=0)
+    MPI_COMM.Scatterv([v, nloc_loc, istart_loc, _from_numpy_dtype(dtype)], vloc, root=0)
 
     return vloc
 
@@ -361,30 +365,31 @@ def array2PETScVec(v):
     # slice of the global vector that belongs to this mpi rank (range: from -> to)
     nloc = iend - istart
     # gather nloc on rank zero
-    Nloc = MPI_COMM.gather(nloc, root=0)
+    nloc_loc = MPI_COMM.gather(nloc, root=0)
     if MPI_RANK != 0:
-        Nloc = [0]
+        nloc_loc = [0]
     # gather istart on rank zero.
-    Istart = MPI_COMM.gather(istart, root=0)
+    istart_loc = MPI_COMM.gather(istart, root=0)
     if MPI_RANK != 0:
-        Istart = [0]
+        istart_loc = [0]
 
     # local vector
     vloc = np_zeros(nloc, PETSc.ScalarType)
 
     # scatter the vector v on all ranks
-    MPI_COMM.Scatterv([v, Nloc, Istart, _from_numpy_dtype(PETSc.ScalarType)], vloc, root=0)
+    MPI_COMM.Scatterv([v, nloc_loc, istart_loc, _from_numpy_dtype(PETSc.ScalarType)], vloc, root=0)
     x.setArray(vloc)
 
     return x
 
 
-def PETScVec2array(x):
+def PETScVec2array(x, rank=0):
     """
-    Converts (copies) a distributed PETSc Vec to a sequential array on process 0
+    Converts (copies) a distributed PETSc Vec to a sequential array on specified rank
 
     Args:
         x: PETSc Vec distributed on all procs
+        rank: rank receiving the numpy array
 
     Returns:
         numpy array on proc 0
@@ -396,53 +401,54 @@ def PETScVec2array(x):
     istart, iend = x.getOwnershipRange()
 
     nloc = iend - istart
-    Nloc = MPI_COMM.gather(nloc, root=0)
-    if MPI_RANK != 0:
-        Nloc = [0]
+    nloc_loc = MPI_COMM.gather(nloc, root=rank)
+    if MPI_RANK != rank:
+        nloc_loc = [0]
 
-    Istart = MPI_COMM.gather(istart, root=0)
-    if MPI_RANK != 0:
-        Istart = [0]
+    istart_loc = MPI_COMM.gather(istart, root=rank)
+    if MPI_RANK != rank:
+        istart_loc = [0]
 
-    if MPI_RANK == 0:
+    if MPI_RANK == rank:
         v = np_zeros(n, PETSc.ScalarType)
     else:
         v = None
 
-    MPI_COMM.Gatherv(vloc, [v, Nloc, Istart, _from_numpy_dtype(PETSc.ScalarType)], root=0)
+    MPI_COMM.Gatherv(vloc, [v, nloc_loc, istart_loc, _from_numpy_dtype(PETSc.ScalarType)], root=0)
 
     return v
 
 
-def PETScMat2coo(A):
+def PETScMat2coo(A, rank=0):
     """
     Converts a distributed PETSc sparse matrice to a scipy coo
-    sparse matrix on process 0
+    sparse matrix on a specified rank
 
     Args:
         A: PETSc Mat distributed on all procs
+        rank: rank receiving the coo sparse matrix
 
     Returns:
-        scipy coo sparse matrix on proc 0
+        scipy coo sparse matrix on the specified rank
     """
 
     indptr_loc, indices_loc, data_loc = A.getValuesCSR()
     m, n = A.getSize()
 
     # gatered values
-    Iptr_gat = MPI_COMM.gather(indptr_loc, root=0)
-    Ind_gat = MPI_COMM.gather(indices_loc, root=0)
-    Data_gat = MPI_COMM.gather(data_loc, root=0)
+    iptr_gat = MPI_COMM.gather(indptr_loc, root=rank)
+    ind_gat = MPI_COMM.gather(indices_loc, root=rank)
+    data_gat = MPI_COMM.gather(data_loc, root=rank)
 
-    if MPI_RANK == 0:
-        data = concatenate(Data_gat)
-        indices = concatenate(Ind_gat)
+    if MPI_RANK == rank:
+        data = concatenate(data_gat)
+        indices = concatenate(ind_gat)
 
         # reconstruct the indptr array
         indptr = np_zeros(shape=m + 1)
         ind = 1
         offset = 0
-        for array in Iptr_gat:
+        for array in iptr_gat:
             last_elem_ind = len(array) - 2
             for i, elem in enumerate(array[1:]):
                 indptr[ind] = offset + elem
