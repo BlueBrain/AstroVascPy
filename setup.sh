@@ -64,8 +64,8 @@ then
         source python-venv/bin/activate
         python3 -m pip install --upgrade pip
     fi
-    pip install -e .
-    pip install tox
+    pip3 install -e .
+    pip3 install tox
 else
     conda_bin=`conda info | grep "active env location" | grep -o "/.*"`/bin
     $conda_bin/pip install -e .
