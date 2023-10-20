@@ -34,7 +34,6 @@ reqs = [
     "libsonata",
     "trimesh",
     "cython",
-    "mpi4py",
     "psutil",
 ]
 

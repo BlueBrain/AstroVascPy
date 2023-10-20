@@ -5,7 +5,7 @@ echo
 if command -v module &> /dev/null
 then
     module purge
-    module load unstable git python gcc hpe-mpi petsc py-petsc4py
+    module load unstable git python gcc hpe-mpi py-mpi4py petsc py-petsc4py
 
 else
     if command -v conda &> /dev/null
@@ -26,13 +26,6 @@ else
             conda create -y --name bfs_env python=3.10.8
             conda activate bfs_env
             conda install -y pip
-
-            if [[ $OSTYPE == 'darwin'* ]];
-            then
-                sed -i '' 's/"mpi4py"/#"mpi4py"/g' setup.py
-            else
-                sed -i 's/"mpi4py"/#"mpi4py"/g' setup.py
-            fi
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
             "$CONDA_PREFIX/bin/pip" install tox
@@ -71,7 +64,8 @@ then
         source python-venv/bin/activate
         python3 -m pip install --upgrade pip
     fi
-    pip3 install -e .
+    pip install -e .
+    pip install tox
 else
     conda_bin=`conda info | grep "active env location" | grep -o "/.*"`/bin
     $conda_bin/pip install -e .
@@ -79,7 +73,7 @@ fi
 
 # Backend solver/library for the linear systems
 # petsc or scipy
-export BACKEND_SOLVER_BFS='scipy'
+export BACKEND_SOLVER_BFS='petsc'
 
 # Run the SciPy solver and compare the result with the PETSc one [which is the default]!
 # 0 : False / 1 : True
