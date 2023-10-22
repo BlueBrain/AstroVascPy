@@ -32,11 +32,8 @@ def _from_numpy_dtype(np_type):
     """Convert NumPy datatype to MPI datatype."""
     dtype_var = dtype(np_type)
     char_d = dtype_var.char
-    mpi_type = MPI._typedict.get(char_d)
-    if mpi_type is None:
-        raise RuntimeError(f"Char '{char_d}' not found in _typedict")
-    else:
-        return mpi_type
+    mpi_type = MPI._typedict[char_d]
+    return mpi_type
 
 
 def BinaryIO2PETScMat(L, file_name="tempMat.dat"):
