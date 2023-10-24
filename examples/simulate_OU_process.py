@@ -37,12 +37,6 @@ print = partial(print, flush=True)
 save_vtk = False
 save_sonata = True
 
-# Flag to enable the relaxation phase.
-# Set 'RELAXATION = True' if you want to stop the radii perturbation (set noise to zero)
-# at the time 'relaxation_start'.
-# The variable 'relaxation_start' is defined together with the other simulation variables.
-RELAXATION = False  # True
-
 curr_dir = Path(__file__).resolve().parent
 params = yaml.full_load(open(str(curr_dir / "data/params.yaml")))
 
@@ -81,15 +75,28 @@ PETSc.Sys.Print("simulate astrovascpy")
 
 simulation_time = 5  # seconds
 time_step = 0.01
+
+# Flag to enable the relaxation phase.
+# Set 'RELAXATION = True' if you want to stop the radii perturbation (set noise to zero)
+# at the time 'relaxation_start'.
+# Set relaxation_start = 0 if you don't want noise at all.
+RELAXATION = False  # True
 if RELAXATION:
     relaxation_start = 3.0  # relaxation starting time
 else:
     relaxation_start = simulation_time  # No relaxation
 
+# Flag to enable sine wave input flow
+SINE_INFLOW = True
+if SINE_INFLOW:
+    A = 6119  # Amplitude of the sine wave
+else:
+    A = 0
+
 # Blood speed on the entry nodes
 if graph is not None:
     entry_speed = create_input_speed(
-        T=simulation_time, step=time_step, A=6119, f=8, C=35000, read_from_file=None
+        T=simulation_time, step=time_step, A=A, f=8, C=35000, read_from_file=None
     )
 else:
     entry_speed = None
