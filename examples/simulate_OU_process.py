@@ -89,7 +89,7 @@ else:
 # Flag to enable sine wave input flow
 SINE_INFLOW = True
 if SINE_INFLOW:
-    A = 6119  # Amplitude of the sine wave 
+    A = 6119  # Amplitude of the sine wave
 else:
     A = 0
 
