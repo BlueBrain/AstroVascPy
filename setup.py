@@ -34,7 +34,6 @@ reqs = [
     "libsonata",
     "trimesh",
     "cython",
-    "mpi4py",
     "psutil",
 ]
 
@@ -46,11 +45,8 @@ doc_reqs = [
 ]
 
 test_reqs = [
-    "mock",
     "pytest",
-    "pytest-click",
-    "pytest-cov",
-    "pytest-html",
+    "pytest-mpi",
 ]
 
 setup(
