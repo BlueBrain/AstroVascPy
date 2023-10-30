@@ -16,7 +16,6 @@ VERSION = module.VERSION
 reqs = [
     "click",
     "cached-property",
-    "pytest",
     "scipy",
     "numpy",
     "h5py",
