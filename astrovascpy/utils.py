@@ -714,4 +714,4 @@ class GRAPH_HELPER:
         else:
             return GRAPH_HELPER._cc_labels
 
-    # - degrees:      the degree of each node in the graph
+    # - degrees:  the degree of each node in the graph
