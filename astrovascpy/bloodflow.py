@@ -32,6 +32,7 @@ from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
 from astrovascpy.utils import find_neighbors
+from astrovascpy.utils import GRAPH_HELPER
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
 
@@ -111,10 +112,10 @@ def update_static_flow_pressure(
         else None
     )
 
-    pressure = _solve_linear(laplacian.tocsc() if graph else None, input_flow)
+    pressure, cc_labels = _solve_linear(laplacian.tocsc() if graph else None, input_flow)
 
     if graph is not None:
-        pressure += base_pressure - np.min(pressure[graph.degrees == 1])
+        pressure[cc_labels] += base_pressure - np.min(pressure[graph.degrees == 1])
 
         incidence = construct_static_incidence_matrix(graph)
         radii = graph.edge_properties.radius.to_numpy()
@@ -616,20 +617,23 @@ def _solve_linear(laplacian, input_flow):
     """Solve sparse linear problem on the largest connected component only.
 
     Args:
-        laplacian (scipy.sparse.csc_matrix): frequency dependent laplacian matrix.
-        input_flow(scipy.sparse.lil_matrix): input flow for each graph node (complex numbers).
+        laplacian (scipy.sparse.csc_matrix): laplacian matrix associated to the graph.
+        input_flow(scipy.sparse.lil_matrix): input flow for each graph node.
 
     Returns:
         scipy.sparse.csc_matrix: frequency dependent laplacian matrix
     """
 
     if MPI_RANK == 0:
+        cc_labels = GRAPH_HELPER.get_cc_labels(laplacian)
+
         if sp.issparse(input_flow):
             input_flow = input_flow.toarray()
 
         result = np.zeros(np.shape(laplacian)[0], dtype=laplacian.dtype)
     else:
         result = None
+        cc_labels = None
 
     # in os.getenv() the second argument refers to the default value
     if (
@@ -643,7 +647,9 @@ def _solve_linear(laplacian, input_flow):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
                     try:
-                        result = linalg.spsolve(laplacian, input_flow)
+                        result[cc_labels] = linalg.spsolve(
+                            laplacian[cc_labels, :][:, cc_labels], input_flow[cc_labels]
+                        )
                     except linalg.MatrixRankWarning:
                         # Ad hoc regularization factor
                         factor = laplacian.diagonal().max() * 1e-14
@@ -655,10 +661,12 @@ def _solve_linear(laplacian, input_flow):
                         L.warning("We added {:.2e} to diagonal to regularize".format(factor))
 
                         laplacian += factor * sp.eye(np.shape(laplacian)[0])
-                        result = linalg.spsolve(laplacian, input_flow)
+                        result[cc_labels] = linalg.spsolve(
+                            laplacian[cc_labels, :][:, cc_labels], input_flow[cc_labels]
+                        )
 
     if os.getenv("BACKEND_SOLVER_BFS", "petsc") == "scipy":
-        return result
+        return result, cc_labels
 
     # PETSc-related part!
 
@@ -666,9 +674,11 @@ def _solve_linear(laplacian, input_flow):
     with mpi_timer.region("PETSc containers [bloodflow.py]"), mpi_mem.region(
         "PETSc containers [bloodflow.py]"
     ):
-        laplacian_petsc = coomatrix2PETScMat(laplacian if MPI_RANK == 0 else [])
-        input_flow_petsc = array2PETScVec(input_flow if MPI_RANK == 0 else [])
-        result_petsc = array2PETScVec(result if MPI_RANK == 0 else [])
+        laplacian_petsc = coomatrix2PETScMat(
+            laplacian[cc_labels, :][:, cc_labels] if MPI_RANK == 0 else []
+        )
+        input_flow_petsc = array2PETScVec(input_flow[cc_labels] if MPI_RANK == 0 else [])
+        result_petsc = array2PETScVec(result[cc_labels] if MPI_RANK == 0 else [])
 
     opts = PETSc.Options()
     # solver
@@ -704,18 +714,22 @@ def _solve_linear(laplacian, input_flow):
 
     petsc_res_norm = None
     if MPI_RANK == 0:
-        petsc_res_norm = np.linalg.norm(input_flow - laplacian * result_petsc_sp)
+        petsc_res_norm = np.linalg.norm(
+            input_flow[cc_labels] - laplacian[cc_labels, :][:, cc_labels] * result_petsc_sp
+        )
     PETSc.Sys.Print(f"-> PETSc residual norm = {petsc_res_norm}")
 
     if bool(int(os.getenv("DEBUG_BFS", "0"))) and MPI_RANK == 0:
-        scipy_res_norm = np.linalg.norm(input_flow - laplacian * result)
+        scipy_res_norm = np.linalg.norm(
+            input_flow[cc_labels] - laplacian[cc_labels, :][:, cc_labels] * result[cc_labels]
+        )
         print(f"-> SciPy residual norm = {scipy_res_norm}")
         assert np.allclose(
             petsc_res_norm, scipy_res_norm, rtol=1e-6, atol=1e-6
         ), "PETSc gives different solution compared to SciPy!"
 
     if MPI_RANK == 0:
-        result = result_petsc_sp
+        result[cc_labels] = result_petsc_sp
 
     # Clean-up
     # This clean-up is imperative, otherwise the memory accumulates and
@@ -732,4 +746,4 @@ def _solve_linear(laplacian, input_flow):
         # Python's garbage collector (explicitly)
         gc.collect()
 
-    return result
+    return result, cc_labels

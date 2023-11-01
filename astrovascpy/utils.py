@@ -20,7 +20,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import psutil
-import scipy as sp
+import scipy as scp
 from mpi4py import MPI
 from scipy.signal import find_peaks_cwt
 from scipy.sparse.csgraph import connected_components
@@ -306,7 +306,7 @@ def get_largest_nodes(graph, n_nodes=1, depth_ratio=1.0, vasc_axis=1):
         - (np.max(positions[:, vasc_axis]) - np.min(positions[:, vasc_axis])) * depth_ratio
     )
     degrees = graph.degrees
-    _, labels = sp.sparse.csgraph.connected_components(
+    _, labels = scp.sparse.csgraph.connected_components(
         graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
     )
     largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
@@ -354,7 +354,7 @@ def get_large_nodes(graph, min_radius=6, depth_ratio=1.0, vasc_axis=1):
         - (np.max(positions[:, vasc_axis]) - np.min(positions[:, vasc_axis])) * depth_ratio
     )
     degrees = graph.degrees
-    _, labels = sp.sparse.csgraph.connected_components(
+    _, labels = scp.sparse.csgraph.connected_components(
         graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
     )
     largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
@@ -689,3 +689,29 @@ def create_input_speed(T, step, A=1, f=1, C=0, read_from_file=None):
         speed = C + A * np.sin(2 * np.pi * f * time)
 
     return speed
+
+
+class GRAPH_HELPER:
+    """ This class helps to compute the following values only once."""
+
+    _cc_labels = None
+
+    @staticmethod
+    def get_cc_labels(laplacian):
+        """
+        Args:
+            laplacian (scipy.sparse.csc_matrix): laplacian matrix associated to the graph.
+        Returns:
+            cc_labels (numpy.array): labels of the main connected component
+        """
+        if GRAPH_HELPER._cc_labels is None:
+            _, labels = connected_components(
+                laplacian, directed=False, return_labels=True
+            )
+            largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
+            GRAPH_HELPER._cc_labels = np.where(labels == largest_cc_label)[0]
+            return GRAPH_HELPER._cc_labels
+        else:
+            return GRAPH_HELPER._cc_labels
+
+    # - degrees:      the degree of each node in the graph

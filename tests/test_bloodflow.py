@@ -569,7 +569,8 @@ def test_solve_linear(point_properties, edge_properties):
     )
     adjacency = adjacency + adjacency.T
     laplacian = sp.csgraph.laplacian(adjacency)
-    pressure = tested._solve_linear(laplacian.tocsc(), boundary_flow)
+    pressure, cc_labels = tested._solve_linear(laplacian.tocsc(), boundary_flow)
+    npt.assert_allclose(cc_labels, np.array([1, 2, 3]))
 
     # The solution of the system is composed by a solution + a constant
     target_pressure = np.array([1.0, 0.0, -1.0])  # target solution
