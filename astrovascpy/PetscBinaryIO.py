@@ -56,6 +56,7 @@ def get_conf():
     precision = None
     indices = None
     complexscalars = None
+    DEFAULT_CONF = ("double", "64bit", False)
 
     if "PETSC_DIR" in os.environ:
         petscdir = os.environ["PETSC_DIR"]
@@ -71,7 +72,7 @@ def get_conf():
                     raise importlib.metadata.PackageNotFoundError
             except importlib.metadata.PackageNotFoundError:
                 warnings.warn("Unable to locate PETSc installation, using defaults")
-                return None, None, None
+                return DEFAULT_CONF
         else:
             petscdir = str(petsc._path.parent / "petsc")
 
@@ -95,19 +96,19 @@ def get_conf():
                     "Unable to locate PETSc installation in specified PETSC_DIR/PETSC_ARCH, \
                      using defaults"
                 )
-                return None, None, None
+                return DEFAULT_CONF
         else:
             warnings.warn(
                 "PETSC_ARCH env not set or incorrect PETSC_DIR is given - \
                  unable to locate PETSc installation, using defaults"
             )
-            return None, None, None
+            return DEFAULT_CONF
 
     try:
         fid = open(petscvariables, "r")
     except IOError:
         warnings.warn("Nonexistent or invalid PETSc installation, using defaults")
-        return None, None, None
+        return DEFAULT_CONF
     else:
         for line in fid:
             if line.startswith("PETSC_PRECISION"):
@@ -119,7 +120,7 @@ def get_conf():
         fid = open(petscconfinclude, "r")
     except IOError:
         warnings.warn("Nonexistent or invalid PETSc installation, using defaults")
-        return None, None, None
+        return DEFAULT_CONF
     else:
         for line in fid:
             if line.startswith("#define PETSC_USE_64BIT_INDICES 1"):
