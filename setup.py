@@ -20,7 +20,6 @@ reqs = [
     "numpy",
     "h5py",
     "networkx",
-    "vtk",
     "morphio",
     "vascpy",
     "matplotlib",
@@ -72,6 +71,7 @@ setup(
     extras_require={
         "docs": doc_reqs,
         "test": test_reqs,
+        "viz": ["vtk"],
     },
     entry_points={
         "console_scripts": [
