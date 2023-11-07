@@ -695,8 +695,8 @@ def create_input_speed(T, step, A=1, f=1, C=0, read_from_file=None):
 
 
 class GRAPH_HELPER:
-    """ This class helps to compute and store 
-    - cc_mask: mask for the main connected component of the graph 
+    """This class helps to compute and store
+    - cc_mask: mask for the main connected component of the graph
     - degrees: array containing the degree of each node
     """
 
@@ -705,7 +705,7 @@ class GRAPH_HELPER:
 
     @staticmethod
     def reset():
-        """ Set cc_mask and degrees to None """
+        """Set cc_mask and degrees to None"""
         GRAPH_HELPER._cc_mask = None
         GRAPH_HELPER._degrees = None
 
@@ -722,7 +722,6 @@ class GRAPH_HELPER:
         )
         largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
         return labels == largest_cc_label
-
 
     @staticmethod
     def compute_degrees(graph):
