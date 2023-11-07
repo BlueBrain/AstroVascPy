@@ -15,16 +15,17 @@ import sys
 import time
 from collections.abc import Iterable
 from contextlib import contextmanager
+from functools import cached_property
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 import psutil
 import scipy as scp
+import vascpy
 from mpi4py import MPI
 from scipy.signal import find_peaks_cwt
 from scipy.sparse.csgraph import connected_components
-from vascpy import PointVasculature
 
 from astrovascpy.exceptions import BloodFlowError
 
@@ -41,6 +42,97 @@ L = logging.getLogger(__name__)
 L.addHandler(console_handler)
 
 MPI_RANK = MPI.COMM_WORLD.Get_rank()
+
+
+class Graph(vascpy.PointVasculature):
+    """Wrapper on top of a vascpy.PointVasculator providing
+    additional graph-related capabilities
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "endfeet_id" not in self._edge_properties.columns:
+            self._set_edge_data()
+
+    @classmethod
+    def from_point_vasculature(cls, point_vasculature):
+        """Instantiate a Graph from a PointVasculature instance
+
+        Args:
+          graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        """
+        return cls(point_vasculature._node_properties, point_vasculature._edge_properties)
+
+    @cached_property
+    def cc_mask(self):
+        """
+        Returns: ids (numpy.array) of the main connected component.
+
+        Computation is made once, next calls for this property
+        will returned the cached result.
+
+        """
+        _, labels = connected_components(
+            self.adjacency_matrix.as_sparse(), directed=False, return_labels=True
+        )
+        largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
+        return labels == largest_cc_label
+
+    @cached_property
+    def degrees(self):
+        """
+        Returns: degrees (numpy.array) of each node
+
+        Computation is made once, next calls for this property
+        will returned the cached result.
+        """
+        return super().degrees
+
+    def get_main_connected_component(self):
+        """Build a graph with only the largest Connected Component (CC).
+
+        Returns: largest CC point graph (Graph)
+        """
+        _, labels = connected_components(
+            self.adjacency_matrix.as_sparse(), directed=False, return_labels=True
+        )
+        largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
+        to_keep_labels = labels == largest_cc_label
+        graph_point = self.node_properties.loc[to_keep_labels]
+        index = graph_point.index
+        graph_edge = self.edge_properties[
+            (self.edge_properties["start_node"].isin(index))
+            | (self.edge_properties["end_node"].isin(index))
+        ]
+        return Graph(graph_point, graph_edge)
+
+    def _set_edge_data(self):
+        """Set lengths, radii, and endefeet_id of edges."""
+        lengths, radii, volume = self._compute_edge_data()
+        self.edge_properties["length"] = lengths
+        self.edge_properties["radius"] = radii
+        self.edge_properties["radius_origin"] = radii
+        self.edge_properties["endfeet_id"] = np.full(radii.shape, -1, dtype=int)
+        self.edge_properties["volume"] = volume
+
+    def _compute_edge_data(self):
+        """Compute the length, radius and volume of each edge.
+
+        Args:
+            graph (Graph): graph containing point vasculature skeleton.
+
+        Returns:
+            numpy.array: (nb_edges, ) radii of each edge (units: µm).
+            numpy.array: (nb_edges, ) lengths of each edge (units: µm).
+            numpy.array: (nb_edges, ) volume of each edge (units: µm^3).
+        """
+        positions = self.points
+        beg_nodes, end_nodes = self.edges.T
+        edge_lengths = np.linalg.norm(positions[end_nodes] - positions[beg_nodes], axis=1)
+        node_radii = 0.5 * self.diameters
+        edge_radii = 0.5 * (node_radii[beg_nodes] + node_radii[end_nodes])
+        edge_volume = edge_lengths * np.power(edge_radii, 2) * np.pi
+        return edge_lengths, edge_radii, edge_volume
 
 
 def find_neighbors(graph, section_id, segment_id):
@@ -84,29 +176,6 @@ def find_degrees_of_neighbors(graph, node_id):
     connected_nodes = set(graph.edge_properties.start_node[neighbors_mask].to_list())
     connected_nodes |= set(graph.edge_properties.end_node[neighbors_mask].to_list())
     return neighbors_mask, connected_nodes, graph.degrees[np.array(list(connected_nodes))]
-
-
-def get_main_connected_component(graph):
-    """Return a graph with only the largest Connected Component (CC).
-
-    Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-
-    Returns:
-        vasculatureAPI.PointVasculature: largest CC point graph.
-    """
-    _, labels = connected_components(
-        graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
-    )
-    largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
-    to_keep_labels = labels == largest_cc_label
-    graph_point = graph.node_properties.loc[to_keep_labels]
-    index = graph_point.index
-    graph_edge = graph.edge_properties[
-        (graph.edge_properties["start_node"].isin(index))
-        | (graph.edge_properties["end_node"].isin(index))
-    ]
-    return PointVasculature(graph_point, graph_edge)
 
 
 def reduce_to_largest_cc(graph):  # pragma: no cover
@@ -155,7 +224,7 @@ def get_subset(graph, iterations=100, starting_nodes_id=None):
         starting_nodes_id (int): start node id.
 
     Returns:
-        vasculatureAPI.PointVasculature: reduced to the largest cc point graph.
+        Graph: reduced to the largest cc point graph.
     """
     if starting_nodes_id is None:
         starting_nodes_id = graph.node_properties.loc[graph.degrees == 1, "diameter"].idxmax()
@@ -186,48 +255,14 @@ def reduce_graph(graph, to_keep_labels):
     new_edge_properties = new_edge_properties.reset_index().drop(columns=["index"])
     new_node_properties.index.name = "index"
     new_edge_properties.index.name = "index"
-    return PointVasculature(new_node_properties, new_edge_properties)
-
-
-def compute_edge_data(graph):
-    """Compute the length, radius and volume of each edge.
-
-    Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-
-    Returns:
-        numpy.array: (nb_edges, ) radii of each edge (units: µm).
-        numpy.array: (nb_edges, ) lengths of each edge (units: µm).
-        numpy.array: (nb_edges, ) volume of each edge (units: µm^3).
-    """
-    positions = graph.points
-    beg_nodes, end_nodes = graph.edges.T
-    edge_lengths = np.linalg.norm(positions[end_nodes] - positions[beg_nodes], axis=1)
-    node_radii = 0.5 * graph.diameters
-    edge_radii = 0.5 * (node_radii[beg_nodes] + node_radii[end_nodes])
-    edge_volume = edge_lengths * np.power(edge_radii, 2) * np.pi
-    return edge_lengths, edge_radii, edge_volume
-
-
-def set_edge_data(graph):
-    """Set lengths, radii, and endefeet_id of edges.
-
-    Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-    """
-    lengths, radii, volume = compute_edge_data(graph)
-    graph.edge_properties["length"] = lengths
-    graph.edge_properties["radius"] = radii
-    graph.edge_properties["radius_origin"] = radii
-    graph.edge_properties["endfeet_id"] = np.full(radii.shape, -1, dtype=int)
-    graph.edge_properties["volume"] = volume
+    return Graph(new_node_properties, new_edge_properties)
 
 
 def create_entry_largest_nodes(graph, params):
     """Get largest nodes of degree 1 for input in the largest connected components.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (Graph): graph containing point vasculature skeleton.
         params (dict): general parameters for vasculature.
 
     Returns:
@@ -237,6 +272,7 @@ def create_entry_largest_nodes(graph, params):
         BloodFlowError: if n_nodes <= 0 or if vasc_axis is not 0, 1 or 2.
     """
     if graph is not None:
+        assert isinstance(graph, Graph)
         if (
             "max_nb_inputs" not in params
             or "depth_ratio" not in params
@@ -258,8 +294,8 @@ def create_entry_largest_nodes(graph, params):
             depth_ratio = 1.0
             L.warning("The depth_ratio must be <= 1. Taking depth_ratio = 1.")
 
-        degrees = GRAPH_HELPER.get_degrees(graph)
-        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
+        degrees = graph.degrees
+        cc_mask = graph.cc_mask
 
         positions = graph.points[cc_mask]
         max_position = np.max(positions[:, vasc_axis])
@@ -435,7 +471,7 @@ def convert_from_networkx(nx_graph):
         nx_graph (networkx graph): input networkx graph
 
     Returns:
-        vascpy.PointVasculature: graph containing point vasculature skeleton.
+        Graph: graph containing point vasculature skeleton.
     """
     node_properties = pd.DataFrame(columns=["x", "y", "z", "diameter"])
     for i in nx_graph:
@@ -455,7 +491,7 @@ def convert_from_networkx(nx_graph):
         edge_properties.loc[i, "type"] = nx_graph[e][v].get("type", 0)
     edge_properties["start_node"] = pd.to_numeric(edge_properties["start_node"])
     edge_properties["end_node"] = pd.to_numeric(edge_properties["end_node"])
-    return PointVasculature(node_properties, edge_properties)
+    return Graph(node_properties, edge_properties)
 
 
 def convert_to_temporal(data, frequencies, times):  # pragma: no cover
@@ -692,68 +728,3 @@ def create_input_speed(T, step, A=1, f=1, C=0, read_from_file=None):
         speed = C + A * np.sin(2 * np.pi * f * time)
 
     return speed
-
-
-class GRAPH_HELPER:
-    """This class helps to compute and store
-    - cc_mask: mask for the main connected component of the graph
-    - degrees: array containing the degree of each node
-    """
-
-    _cc_mask = None
-    _degrees = None
-
-    @staticmethod
-    def reset():
-        """Set cc_mask and degrees to None"""
-        GRAPH_HELPER._cc_mask = None
-        GRAPH_HELPER._degrees = None
-
-    @staticmethod
-    def compute_cc_mask(graph):
-        """
-        Args:
-            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-        Returns:
-            cc_mask (numpy.array): ids of the main connected component
-        """
-        _, labels = connected_components(
-            graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
-        )
-        largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
-        return labels == largest_cc_label
-
-    @staticmethod
-    def compute_degrees(graph):
-        """Compute degrees of each node
-        Args:
-            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-        Returns:
-            degrees (numpy.array): degrees of each node
-        """
-        return graph.degrees
-
-    @staticmethod
-    def get_cc_mask(graph):
-        """
-        Args:
-            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-        Returns:
-            cc_mask (numpy.array): ids of the main connected component
-        """
-        if GRAPH_HELPER._cc_mask is None:
-            GRAPH_HELPER._cc_mask = GRAPH_HELPER.compute_cc_mask(graph)
-
-        return GRAPH_HELPER._cc_mask
-
-    @staticmethod
-    def get_degrees(graph):
-        """
-        Args:
-            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-        Returns:
-            degrees (numpy.array): degrees of each node
-        """
-        if GRAPH_HELPER._degrees is None:
-            GRAPH_HELPER._degrees = GRAPH_HELPER.compute_degrees(graph)
-        return GRAPH_HELPER._degrees
