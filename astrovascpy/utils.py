@@ -695,13 +695,17 @@ def create_input_speed(T, step, A=1, f=1, C=0, read_from_file=None):
 
 
 class GRAPH_HELPER:
-    """This class helps to compute the following values only once."""
+    """ This class helps to compute and store 
+    - cc_mask: mask for the main connected component of the graph 
+    - degrees: array containing the degree of each node
+    """
 
     _cc_mask = None
     _degrees = None
 
     @staticmethod
     def reset():
+        """ Set cc_mask and degrees to None """
         GRAPH_HELPER._cc_mask = None
         GRAPH_HELPER._degrees = None
 
@@ -711,7 +715,7 @@ class GRAPH_HELPER:
         Args:
             graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         Returns:
-            cc_mask (numpy.array): labels of the main connected component
+            cc_mask (numpy.array): ids of the main connected component
         """
         _, labels = connected_components(
             graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
@@ -719,7 +723,6 @@ class GRAPH_HELPER:
         largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
         return labels == largest_cc_label
 
-    # np.where(labels == largest_cc_label)[0]
 
     @staticmethod
     def compute_degrees(graph):
@@ -737,7 +740,7 @@ class GRAPH_HELPER:
         Args:
             graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         Returns:
-            cc_mask (numpy.array): labels of the main connected component
+            cc_mask (numpy.array): ids of the main connected component
         """
         if GRAPH_HELPER._cc_mask is None:
             GRAPH_HELPER._cc_mask = GRAPH_HELPER.compute_cc_mask(graph)
