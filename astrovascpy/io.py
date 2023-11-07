@@ -20,7 +20,6 @@ from vascpy import PointVasculature
 from vascpy import SectionVasculature
 
 from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.utils import get_main_connected_component
 from astrovascpy.utils import set_edge_data
 
 MPI_COMM = mpi.COMM_WORLD
@@ -64,8 +63,6 @@ def load_graph_from_bin(filename, is_cc=False):
             print("Loading graph from binary file using pickle", flush=True)
             filehandler = open(filename, "rb")
             graph = pickle.load(filehandler)
-            if not is_cc:
-                graph = get_main_connected_component(graph)
         else:
             raise BloodFlowError("Graph file not found")
         return graph
@@ -88,8 +85,6 @@ def load_graph_from_h5(filename, is_cc=False):
             print("Loading sonata graph using PointVasculature.load_sonata", flush=True)
             graph = PointVasculature.load_sonata(filename)
             set_edge_data(graph)
-            if not is_cc:
-                graph = get_main_connected_component(graph)
         else:
             raise BloodFlowError("Graph file not found")
         return graph
@@ -121,8 +116,6 @@ def load_graph_from_csv(node_filename, edge_filename, is_cc=False):
                 raise BloodFlowError(f"Missing {col} in columns")
 
         graph = PointVasculature(graph_nodes, graph_edges)
-        if not is_cc:
-            graph = get_main_connected_component(graph)
 
         if "endfeet_id" not in graph_edges.columns:
             set_edge_data(graph)

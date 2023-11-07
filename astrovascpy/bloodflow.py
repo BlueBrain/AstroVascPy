@@ -31,8 +31,8 @@ from astrovascpy.scipy_petsc_conversions import BinaryIO2PETScVec
 from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
-from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import GRAPH_HELPER
+from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
 
@@ -89,7 +89,7 @@ def update_static_flow_pressure(
 
     Args:
         graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
-        input_flow(numpy.array): input flow for each graph node (complex numbers).
+        input_flow(numpy.array): input flow for each graph node.
         blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
         base_pressure (float): minimum pressure in the output edges
         with_hematocrit (bool): consider hematrocrit for resistance model
@@ -112,10 +112,20 @@ def update_static_flow_pressure(
         else None
     )
 
-    pressure, cc_labels = _solve_linear(laplacian.tocsc() if graph else None, input_flow)
+    if MPI_RANK == 0:
+        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
+        degrees = GRAPH_HELPER.get_degrees(graph)
+        laplacian_cc = laplacian.tocsc()[cc_mask, :][:, cc_mask]
+        input_flow = input_flow[cc_mask]
+    else:
+        laplacian_cc = None
+
+    solution = _solve_linear(laplacian_cc if graph else None, input_flow)
 
     if graph is not None:
-        pressure[cc_labels] += base_pressure - np.min(pressure[graph.degrees == 1])
+        pressure = np.zeros(shape=graph.n_nodes)
+        pressure[cc_mask] = solution
+        pressure += base_pressure - np.min(pressure[degrees == 1])
 
         incidence = construct_static_incidence_matrix(graph)
         radii = graph.edge_properties.radius.to_numpy()
@@ -369,9 +379,13 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
     """
 
     if graph is not None:
+
+        degrees = GRAPH_HELPER.get_degrees(graph)
+        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
+
         # Compute nodes of degree 1 where blood flows out
-        boundary_nodes = np.where(graph.degrees == 1)[0]
-        graph_1 = graph.node_properties.loc[boundary_nodes]
+        boundary_nodes_mask = (degrees == 1) & cc_mask
+        graph_1 = graph.node_properties.loc[boundary_nodes_mask]
 
         boundary_flows = np.zeros(shape=graph.n_nodes)  # initialize
         boundary_flows[entry_nodes] = input_flows  # set input flow
@@ -383,7 +397,7 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
         weights = areas / tot_area
 
         tot_input_flow = np.sum(input_flows)
-        boundary_flows[boundary_nodes] -= tot_input_flow * weights
+        boundary_flows[boundary_nodes_mask] -= tot_input_flow * weights
         return boundary_flows
     else:
         return None
@@ -625,7 +639,6 @@ def _solve_linear(laplacian, input_flow):
     """
 
     if MPI_RANK == 0:
-        cc_labels = GRAPH_HELPER.get_cc_labels(laplacian)
 
         if sp.issparse(input_flow):
             input_flow = input_flow.toarray()
@@ -633,7 +646,6 @@ def _solve_linear(laplacian, input_flow):
         result = np.zeros(np.shape(laplacian)[0], dtype=laplacian.dtype)
     else:
         result = None
-        cc_labels = None
 
     # in os.getenv() the second argument refers to the default value
     if (
@@ -647,9 +659,7 @@ def _solve_linear(laplacian, input_flow):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
                     try:
-                        result[cc_labels] = linalg.spsolve(
-                            laplacian[cc_labels, :][:, cc_labels], input_flow[cc_labels]
-                        )
+                        result = linalg.spsolve(laplacian, input_flow)
                     except linalg.MatrixRankWarning:
                         # Ad hoc regularization factor
                         factor = laplacian.diagonal().max() * 1e-14
@@ -661,12 +671,10 @@ def _solve_linear(laplacian, input_flow):
                         L.warning("We added {:.2e} to diagonal to regularize".format(factor))
 
                         laplacian += factor * sp.eye(np.shape(laplacian)[0])
-                        result[cc_labels] = linalg.spsolve(
-                            laplacian[cc_labels, :][:, cc_labels], input_flow[cc_labels]
-                        )
+                        result = linalg.spsolve(laplacian, input_flow)
 
     if os.getenv("BACKEND_SOLVER_BFS", "petsc") == "scipy":
-        return result, cc_labels
+        return result
 
     # PETSc-related part!
 
@@ -674,11 +682,9 @@ def _solve_linear(laplacian, input_flow):
     with mpi_timer.region("PETSc containers [bloodflow.py]"), mpi_mem.region(
         "PETSc containers [bloodflow.py]"
     ):
-        laplacian_petsc = coomatrix2PETScMat(
-            laplacian[cc_labels, :][:, cc_labels] if MPI_RANK == 0 else []
-        )
-        input_flow_petsc = array2PETScVec(input_flow[cc_labels] if MPI_RANK == 0 else [])
-        result_petsc = array2PETScVec(result[cc_labels] if MPI_RANK == 0 else [])
+        laplacian_petsc = coomatrix2PETScMat(laplacian if MPI_RANK == 0 else [])
+        input_flow_petsc = array2PETScVec(input_flow if MPI_RANK == 0 else [])
+        result_petsc = array2PETScVec(result if MPI_RANK == 0 else [])
 
     opts = PETSc.Options()
     # solver
@@ -714,22 +720,18 @@ def _solve_linear(laplacian, input_flow):
 
     petsc_res_norm = None
     if MPI_RANK == 0:
-        petsc_res_norm = np.linalg.norm(
-            input_flow[cc_labels] - laplacian[cc_labels, :][:, cc_labels] * result_petsc_sp
-        )
+        petsc_res_norm = np.linalg.norm(input_flow - laplacian * result_petsc_sp)
     PETSc.Sys.Print(f"-> PETSc residual norm = {petsc_res_norm}")
 
     if bool(int(os.getenv("DEBUG_BFS", "0"))) and MPI_RANK == 0:
-        scipy_res_norm = np.linalg.norm(
-            input_flow[cc_labels] - laplacian[cc_labels, :][:, cc_labels] * result[cc_labels]
-        )
+        scipy_res_norm = np.linalg.norm(input_flow - laplacian * result)
         print(f"-> SciPy residual norm = {scipy_res_norm}")
         assert np.allclose(
             petsc_res_norm, scipy_res_norm, rtol=1e-6, atol=1e-6
         ), "PETSc gives different solution compared to SciPy!"
 
     if MPI_RANK == 0:
-        result[cc_labels] = result_petsc_sp
+        result = result_petsc_sp
 
     # Clean-up
     # This clean-up is imperative, otherwise the memory accumulates and
@@ -746,4 +748,4 @@ def _solve_linear(laplacian, input_flow):
         # Python's garbage collector (explicitly)
         gc.collect()
 
-    return result, cc_labels
+    return result

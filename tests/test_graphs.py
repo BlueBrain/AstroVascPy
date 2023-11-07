@@ -34,6 +34,7 @@ def test_simple_graph():
     utils.set_edge_data(graph)
     entry_nodes = [0]
     input_flow = [1.0]
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     blood_viscosity = 0.1
     tested.update_static_flow_pressure(
@@ -112,6 +113,7 @@ def test_bifurcation():
     utils.set_edge_data(graph)
     entry_nodes = [0]
     input_flow = [1.0]
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     blood_viscosity = 0.1
     tested.update_static_flow_pressure(
@@ -175,6 +177,7 @@ def test_loop():
     utils.set_edge_data(graph)
     entry_nodes = [0]
     input_flow = [1.0]
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     blood_viscosity = 0.1
     tested.update_static_flow_pressure(

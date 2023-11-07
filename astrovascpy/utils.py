@@ -257,12 +257,15 @@ def create_entry_largest_nodes(graph, params):
         if depth_ratio > 1:
             depth_ratio = 1.0
             L.warning("The depth_ratio must be <= 1. Taking depth_ratio = 1.")
-        positions = graph.points
+
+        degrees = GRAPH_HELPER.get_degrees(graph)
+        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
+
+        positions = graph.points[cc_mask]
         max_position = np.max(positions[:, vasc_axis])
         min_position = np.min(positions[:, vasc_axis])
         depth_max = max_position - (max_position - min_position) * depth_ratio
-        degrees = graph.degrees
-        sliced_ids = np.where((degrees == 1) & (positions[:, vasc_axis] >= depth_max))[0]
+        sliced_ids = np.where(cc_mask & (degrees == 1) & (positions[:, vasc_axis] >= depth_max))[0]
         if sliced_ids.size == 0:
             raise BloodFlowError("Found zero nodes matching our conditions.")
         if sliced_ids.size < n_nodes:
@@ -692,26 +695,63 @@ def create_input_speed(T, step, A=1, f=1, C=0, read_from_file=None):
 
 
 class GRAPH_HELPER:
-    """ This class helps to compute the following values only once."""
+    """This class helps to compute the following values only once."""
 
-    _cc_labels = None
+    _cc_mask = None
+    _degrees = None
 
     @staticmethod
-    def get_cc_labels(laplacian):
+    def reset():
+        GRAPH_HELPER._cc_mask = None
+        GRAPH_HELPER._degrees = None
+
+    @staticmethod
+    def compute_cc_mask(graph):
         """
         Args:
-            laplacian (scipy.sparse.csc_matrix): laplacian matrix associated to the graph.
+            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         Returns:
-            cc_labels (numpy.array): labels of the main connected component
+            cc_mask (numpy.array): labels of the main connected component
         """
-        if GRAPH_HELPER._cc_labels is None:
-            _, labels = connected_components(
-                laplacian, directed=False, return_labels=True
-            )
-            largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
-            GRAPH_HELPER._cc_labels = np.where(labels == largest_cc_label)[0]
-            return GRAPH_HELPER._cc_labels
-        else:
-            return GRAPH_HELPER._cc_labels
+        _, labels = connected_components(
+            graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
+        )
+        largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
+        return labels == largest_cc_label
 
-    # - degrees:  the degree of each node in the graph
+    # np.where(labels == largest_cc_label)[0]
+
+    @staticmethod
+    def compute_degrees(graph):
+        """Compute degrees of each node
+        Args:
+            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        Returns:
+            degrees (numpy.array): degrees of each node
+        """
+        return graph.degrees
+
+    @staticmethod
+    def get_cc_mask(graph):
+        """
+        Args:
+            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        Returns:
+            cc_mask (numpy.array): labels of the main connected component
+        """
+        if GRAPH_HELPER._cc_mask is None:
+            GRAPH_HELPER._cc_mask = GRAPH_HELPER.compute_cc_mask(graph)
+
+        return GRAPH_HELPER._cc_mask
+
+    @staticmethod
+    def get_degrees(graph):
+        """
+        Args:
+            graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        Returns:
+            degrees (numpy.array): degrees of each node
+        """
+        if GRAPH_HELPER._degrees is None:
+            GRAPH_HELPER._degrees = GRAPH_HELPER.compute_degrees(graph)
+        return GRAPH_HELPER._degrees

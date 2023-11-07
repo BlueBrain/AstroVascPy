@@ -400,21 +400,21 @@ def test_compute_static_laplacian():
 def test_update_static_flow_pressure():
     point_properties = pd.DataFrame(
         {
-            "x": [0, 0, 0, 0, 0, 0, 0],
-            "y": [0, 0, 0, 1, 1, 1, 0],
-            "z": [0, 1, 2, 0, 1, 2, 3],
-            "diameter": [10, 11, 9, 11, 4, 10, 5],
+            "x": [0, 0, 0, 0, 0, 0, 0, 0],
+            "y": [0, 0, 0, 1, 1, 1, 0, 0],
+            "z": [0, 1, 2, 0, 1, 2, 3, 4],
+            "diameter": [10, 11, 9, 11, 4, 10, 5, 56],
         }
     )
 
     edge_properties = pd.DataFrame(
         {
-            "start_node": [0, 1, 2, 3, 3],
-            "end_node": [1, 2, 3, 4, 5],
-            "type": [0, 0, 0, 0, 0],
+            "start_node": [0, 1, 2, 3, 3, 6],
+            "end_node": [1, 2, 3, 4, 5, 7],
+            "type": [0, 0, 0, 0, 0, 0],
         },
         index=pd.MultiIndex.from_tuples(
-            ([0, 0], [0, 1], [1, 0], [1, 1], [0, 2]),
+            ([0, 0], [0, 1], [1, 0], [1, 1], [0, 2], [1, 2]),
             names=["section_id", "segment_id"],
         ),
     )
@@ -422,19 +422,20 @@ def test_update_static_flow_pressure():
     utils.set_edge_data(graph)
     entry_nodes = [0]
     input_flow = len(entry_nodes) * [1.0]
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     tested.update_static_flow_pressure(
         graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
     )
     npt.assert_allclose(
         graph.edge_properties["flow"],
-        np.array([1.0, 1.0, 1.0, 0.137931, 0.862069]),
+        np.array([1.0, 1.0, 1.0, 0.137931, 0.862069, 0]),
         rtol=5e-7,
         atol=5e-7,
     )
     npt.assert_allclose(
         graph.node_properties["pressure"],
-        np.array([0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133]),
+        np.array([0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133]),
         rtol=5e-7,
         atol=5e-7,
     )
@@ -462,6 +463,7 @@ def test_total_flow_conservation_in_graph():
     transp_incidence = tested.construct_static_incidence_matrix(graph)
     incidence = transp_incidence.T
 
+    utils.GRAPH_HELPER.reset()
     boundary_flows = tested.boundary_flows_A_based(graph, entry_nodes, input_flows)
 
     npt.assert_allclose(
@@ -534,6 +536,8 @@ def test_conservation_flow():
 
     entry_nodes = [0]
     input_flow = len(entry_nodes) * [1.0]
+
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
 
     tested.update_static_flow_pressure(
@@ -561,6 +565,7 @@ def test_solve_linear(point_properties, edge_properties):
     graph.edge_properties["radius"] = [1, 1.25]
     entry_nodes = [0]
     input_flow = [1.0]
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     adjacency = sp.csr_matrix(
         (graph.n_edges * [1.0], (graph.edges[:, 0], graph.edges[:, 1])),
@@ -569,8 +574,7 @@ def test_solve_linear(point_properties, edge_properties):
     )
     adjacency = adjacency + adjacency.T
     laplacian = sp.csgraph.laplacian(adjacency)
-    pressure, cc_labels = tested._solve_linear(laplacian.tocsc(), boundary_flow)
-    npt.assert_allclose(cc_labels, np.array([1, 2, 3]))
+    pressure = tested._solve_linear(laplacian.tocsc(), boundary_flow)
 
     # The solution of the system is composed by a solution + a constant
     target_pressure = np.array([1.0, 0.0, -1.0])  # target solution
@@ -584,5 +588,6 @@ def test_boundary_flows_A_based(point_properties, edge_properties):
     graph.edge_properties["radius"] = [1, 1.25]
     utils.set_edge_data(graph)
 
+    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, [0], [1])
     npt.assert_allclose(boundary_flow, np.array([1.0, 0.0, -1.0]), rtol=2e-6)

@@ -60,6 +60,7 @@ def test_find_degrees_of_neighbors(point_properties, edge_properties):
 
 def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
     graph = PointVasculature(point_properties, edge_properties)
+    test_module.GRAPH_HELPER.reset()
     params = {
         "max_nb_inputs": 1,
         "depth_ratio": 1,

@@ -27,6 +27,7 @@ from petsc4py import PETSc
 
 from astrovascpy import bloodflow
 from astrovascpy.io import load_graph_from_bin
+
 # from astrovascpy.io import load_graph_from_csv
 # from astrovascpy.io import load_graph_from_h5
 from astrovascpy.report_writer import write_simulation_report
