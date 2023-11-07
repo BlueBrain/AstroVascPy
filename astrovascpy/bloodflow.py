@@ -125,7 +125,7 @@ def update_static_flow_pressure(
     if graph is not None:
         pressure = np.zeros(shape=graph.n_nodes)
         pressure[cc_mask] = solution
-        pressure += base_pressure - np.min(pressure[degrees == 1])
+        pressure += base_pressure - np.min(pressure[(degrees == 1) & cc_mask])
 
         incidence = construct_static_incidence_matrix(graph)
         radii = graph.edge_properties.radius.to_numpy()
