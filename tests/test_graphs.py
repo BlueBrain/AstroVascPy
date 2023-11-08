@@ -5,7 +5,7 @@ import pandas as pd
 from vascpy import PointVasculature
 
 from astrovascpy import bloodflow as tested
-from astrovascpy import utils
+from astrovascpy.utils import Graph
 
 L = logging.getLogger(__name__)
 
@@ -30,8 +30,7 @@ def test_simple_graph():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = Graph(point_properties, edge_properties)
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
@@ -108,8 +107,7 @@ def test_bifurcation():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = Graph(point_properties, edge_properties)
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
@@ -171,8 +169,7 @@ def test_loop():
         ),
     )
 
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = Graph(point_properties, edge_properties)
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)

@@ -20,8 +20,7 @@ from vascpy import PointVasculature
 from vascpy import SectionVasculature
 
 from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.utils import get_main_connected_component
-from astrovascpy.utils import set_edge_data
+from astrovascpy.utils import Graph
 
 MPI_COMM = mpi.COMM_WORLD
 MPI_RANK = MPI_COMM.Get_rank()
@@ -34,17 +33,17 @@ def load_graph(filename):
         filename (str): vasculature dataset.
 
     Returns:
-        vasculatureAPI.PointVasculature: graph containing point vasculature skeleton.
+        utils.Graph: graph containing point vasculature skeleton.
 
     Raises:
         BloodFlowError: if the file object identified by filename is not in h5 format.
     """
     if Path(filename).suffix == ".h5":
-        graph = SectionVasculature.load(filename).as_point_graph()
+        pv = SectionVasculature.load(filename).as_point_graph()
+        graph = Graph.from_point_vasculature(pv)
         graph.edge_properties.index = pd.MultiIndex.from_frame(
             graph.edge_properties.loc[:, ["section_id", "segment_id"]]
         )
-        set_edge_data(graph)
         return graph
     raise BloodFlowError("File object type identified by filename is not supported")
 
@@ -57,15 +56,14 @@ def load_graph_from_bin(filename, is_cc=False):
         save_cc (bool): if True the graph is assumed to be fully connected and
         the computation of the main connected component is skipped
     Returns:
-        vasculatureAPI.PointVasculature: graph containing point vasculature skeleton.
+        utils.Graph: graph containing point vasculature skeleton.
     """
     if MPI_RANK == 0:
         if os.path.exists(filename):
             print("Loading graph from binary file using pickle", flush=True)
             filehandler = open(filename, "rb")
-            graph = pickle.load(filehandler)
-            if not is_cc:
-                graph = get_main_connected_component(graph)
+            pv = pickle.load(filehandler)
+            graph = Graph.from_point_vasculature(pv)
         else:
             raise BloodFlowError("Graph file not found")
         return graph
@@ -81,15 +79,13 @@ def load_graph_from_h5(filename, is_cc=False):
         save_cc (bool): if True the graph is assumed to be fully connected and
         the computation of the main connected component is skipped
     Returns:
-        vasculatureAPI.PointVasculature: graph containing point vasculature skeleton.
+        utils.Graph: graph containing point vasculature skeleton.
     """
     if MPI_RANK == 0:
         if os.path.exists(filename):
             print("Loading sonata graph using PointVasculature.load_sonata", flush=True)
-            graph = PointVasculature.load_sonata(filename)
-            set_edge_data(graph)
-            if not is_cc:
-                graph = get_main_connected_component(graph)
+            pv = PointVasculature.load_sonata(filename)
+            graph = Graph.from_point_vasculature(pv)
         else:
             raise BloodFlowError("Graph file not found")
         return graph
@@ -108,7 +104,7 @@ def load_graph_from_csv(node_filename, edge_filename, is_cc=False):
         save_cc (bool): if True the graph is assumed to be fully connected and
         the computation of the main connected component is skipped
     Returns:
-        vasculatureAPI.PointVasculature: graph containing point vasculature skeleton.
+        utils.Graph: graph containing point vasculature skeleton.
     """
     if MPI_RANK == 0:
         print("Loading csv dataset using pandas", flush=True)
@@ -120,13 +116,8 @@ def load_graph_from_csv(node_filename, edge_filename, is_cc=False):
             if col not in graph_edges.columns:
                 raise BloodFlowError(f"Missing {col} in columns")
 
-        graph = PointVasculature(graph_nodes, graph_edges)
-        if not is_cc:
-            graph = get_main_connected_component(graph)
-
-        if "endfeet_id" not in graph_edges.columns:
-            set_edge_data(graph)
-
+        pv = PointVasculature(graph_nodes, graph_edges)
+        graph = Graph.from_point_vasculature(pv)
         return graph
     else:
         return None

@@ -27,8 +27,9 @@ from petsc4py import PETSc
 
 from astrovascpy import bloodflow
 from astrovascpy.io import load_graph_from_bin
-from astrovascpy.io import load_graph_from_csv
-from astrovascpy.io import load_graph_from_h5
+
+# from astrovascpy.io import load_graph_from_csv
+# from astrovascpy.io import load_graph_from_h5
 from astrovascpy.report_writer import write_simulation_report
 from astrovascpy.utils import create_entry_largest_nodes
 from astrovascpy.utils import mpi_mem
@@ -271,15 +272,12 @@ if graph is not None:
         flow = graph.edge_properties["flow"]
         print("flow:", flow)
         pressure = graph.node_properties["pressure"]
-        flow_vtk = np.copy(flow)
-        flow_vtk[flow > 0] = np.log10(flow_vtk[flow > 0])
-        flow_vtk[flow < 0] = -np.log10(-flow_vtk[flow < 0])
 
         pressure_edge = []
         for u, v in graph.edges:
             pressure_edge.append(0.5 * (pressure[u] + pressure[v]))
 
-        properties = {"flow": flow_vtk, "pressure": pressure_edge}
+        properties = {"flow": flow, "pressure": pressure_edge}
 
         filename = str(vtk_path / "flow_pressure")
         points = graph.node_properties[["x", "y", "z"]].to_numpy()
