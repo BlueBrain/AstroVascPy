@@ -21,7 +21,6 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import psutil
-import scipy as scp
 import vascpy
 from mpi4py import MPI
 from scipy.signal import find_peaks_cwt
@@ -345,7 +344,7 @@ def get_largest_nodes(graph, n_nodes=1, depth_ratio=1.0, vasc_axis=1):
         - (np.max(positions[:, vasc_axis]) - np.min(positions[:, vasc_axis])) * depth_ratio
     )
     degrees = graph.degrees
-    _, labels = scp.sparse.csgraph.connected_components(
+    _, labels = connected_components(
         graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
     )
     largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])
@@ -393,7 +392,7 @@ def get_large_nodes(graph, min_radius=6, depth_ratio=1.0, vasc_axis=1):
         - (np.max(positions[:, vasc_axis]) - np.min(positions[:, vasc_axis])) * depth_ratio
     )
     degrees = graph.degrees
-    _, labels = scp.sparse.csgraph.connected_components(
+    _, labels = connected_components(
         graph.adjacency_matrix.as_sparse(), directed=False, return_labels=True
     )
     largest_cc_label = np.argmax(np.unique(labels, return_counts=True)[1])

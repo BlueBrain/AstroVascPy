@@ -20,7 +20,7 @@ import numpy as np
 import pandas as pd
 from mpi4py import MPI as mpi
 from petsc4py import PETSc
-from scipy import sparse as sp
+from scipy import sparse
 from scipy.sparse import linalg
 from scipy.stats import randint
 from tqdm import tqdm
@@ -70,12 +70,12 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
     resistances = lengths * compute_edge_resistances(
         radii, blood_viscosity, with_hematocrit=with_hematocrit
     )
-    adjacency = sp.csr_matrix(
+    adjacency = sparse.csr_matrix(
         (1.0 / resistances, (graph.edges[:, 0], graph.edges[:, 1])),
         shape=(graph.n_nodes, graph.n_nodes),
         dtype=FLOAT,
     )
-    return sp.csgraph.laplacian(adjacency + adjacency.T)
+    return sparse.csgraph.laplacian(adjacency + adjacency.T)
 
 
 def update_static_flow_pressure(
@@ -133,7 +133,7 @@ def update_static_flow_pressure(
         resistances = lengths * compute_edge_resistances(
             radii, blood_viscosity, with_hematocrit=with_hematocrit
         )
-        pressure_to_flow = sp.diags(1.0 / resistances).dot(incidence)
+        pressure_to_flow = sparse.diags(1.0 / resistances).dot(incidence)
         graph.edge_properties["flow"] = pressure_to_flow.dot(pressure)
         graph.node_properties["pressure"] = pressure
 
@@ -625,7 +625,7 @@ def construct_static_incidence_matrix(graph):
     ones = np.ones(graph.n_edges)
     data = np.dstack([ones, -ones]).flatten()
 
-    return sp.csc_matrix((data, (row, col)), shape=(graph.n_edges, graph.n_nodes))
+    return sparse.csc_matrix((data, (row, col)), shape=(graph.n_edges, graph.n_nodes))
 
 
 def _solve_linear(laplacian, input_flow):
@@ -640,7 +640,7 @@ def _solve_linear(laplacian, input_flow):
     """
 
     if MPI_RANK == 0:
-        if sp.issparse(input_flow):
+        if sparse.issparse(input_flow):
             input_flow = input_flow.toarray()
 
         result = np.zeros(np.shape(laplacian)[0], dtype=laplacian.dtype)
@@ -670,7 +670,7 @@ def _solve_linear(laplacian, input_flow):
                             L.warning("Diagonal elements are big. Results can be inaccurate.")
                         L.warning("We added {:.2e} to diagonal to regularize".format(factor))
 
-                        laplacian += factor * sp.eye(np.shape(laplacian)[0])
+                        laplacian += factor * sparse.eye(np.shape(laplacian)[0])
                         result = linalg.spsolve(laplacian, input_flow)
 
     if os.getenv("BACKEND_SOLVER_BFS", "petsc") == "scipy":
