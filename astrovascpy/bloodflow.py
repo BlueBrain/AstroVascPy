@@ -31,7 +31,7 @@ from astrovascpy.scipy_petsc_conversions import BinaryIO2PETScVec
 from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
-from astrovascpy.utils import GRAPH_HELPER
+from astrovascpy.utils import Graph
 from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
@@ -58,7 +58,7 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
     """Compute the time-independent Laplacian.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
         with_hematocrit (bool): consider hematrocrit for resistance model
 
@@ -88,7 +88,7 @@ def update_static_flow_pressure(
     """Compute the time-independent pressure and flow.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         input_flow(numpy.array): input flow for each graph node.
         blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
         base_pressure (float): minimum pressure in the output edges
@@ -113,8 +113,8 @@ def update_static_flow_pressure(
     )
 
     if MPI_RANK == 0:
-        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
-        degrees = GRAPH_HELPER.get_degrees(graph)
+        cc_mask = graph.cc_mask
+        degrees = graph.degrees
         laplacian_cc = laplacian.tocsc()[cc_mask, :][:, cc_mask]
         input_flow = input_flow[cc_mask]
     else:
@@ -170,7 +170,7 @@ def set_edge_resistances(graph, blood_viscosity, with_hematocrit=True):
     """Set the edge resistances on graph.edge_properties.
 
     Args:
-        graph (vasculatureAPI.VasculatureGraph): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         blood_viscosity (float): 1.2e-6 , standard value of the plasma viscosity (g.µm^-1.s^-1).
         with_hematocrit (bool): consider hematrocrit for resistance model.
     """
@@ -185,7 +185,7 @@ def set_endfeet_ids(graph, edge_ids, endfeet_ids):
     """Set endfeet ids to graph.edge_properties.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         edge_ids (pandas IndexSlice): is the corresponding id for each edge.
         endfeet_ids (numpy.array): (nb_endfeet_ids,) is the corresponding endfeet ids.
 
@@ -203,7 +203,7 @@ def set_endfeet_ids(graph, edge_ids, endfeet_ids):
 def generate_endfeet(graph, endfeet_coverage, seed):
     """Generates endfeet ids on randomly selected edges
     Args:
-        graph (vasculatureAPI.PointVasculature).
+        graph (utils.Graph).
         endfeet_coverage (float): Percentage of edges connected with endfeet.
         seed (int): random number generator seed.
     """
@@ -226,7 +226,7 @@ def get_radii_at_endfeet(graph):
     """Get the radii at endfeet.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
         DataFrame: (endfeet_id, radius) pandas dataframe with endfeet_id and corresponding radius.
@@ -240,7 +240,7 @@ def get_radius_at_endfoot(graph, endfoot_id):
     """Get the radius at endfoot.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         endfoot_id (int): is the corresponding endfoot id.
 
     Returns:
@@ -260,7 +260,7 @@ def set_radii_at_endfeet(graph, endfeet_radii):
     """Set radii at endfeet.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): raph containing point vasculature skeleton.
+        graph (utils.Graph): raph containing point vasculature skeleton.
         endfeet_radii (DataFrame): (endfeet_id, radius) pandas dataframe with endfeet_id and
         the corresponding radius.
     """
@@ -271,7 +271,7 @@ def set_radius_at_endfoot(graph, endfoot_id, endfoot_radius):
     """Set radius at endfoot.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         endfoot_id (int): is the corresponding endfoot id.
         endfoot_radius (float or numpy.array): corresponding radius.
 
@@ -296,7 +296,7 @@ def set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length):  
     set the explored edges to the endfoot_id.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         endfoot_id (int): id of the endfoot.
         segment_id (int): id of the corresponding segment.
         section_id (int): id of the corresponding section.
@@ -316,7 +316,7 @@ def get_closest_edges(args, graph):
         args[0] being segment_id (int): id of the corresponding segment,
         args[1], section_id (int): id of the corresponding section and
         args[2], endfeet_length (float): is the corresponding endfoot length in µm.
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
         numpy.array: list of edges close to the original edge id.
@@ -337,7 +337,7 @@ def _depth_first_search(graph, current_edge, current_distance, visited=None):
     """Traverse graph using Depth-first search and return edge ids close to starting edge.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         current_edge (tuple): id of the current edge to process.
         current_distance (float): left distance to be traversed.
         visited (set): list of all edges that have been visited so far.
@@ -370,7 +370,7 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
     """Compute the boundary flows on the exit nodes based on their areas.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (Graph): graph containing point vasculature skeleton.
         entry_nodes (numpy.array): Ids of the entry nodes.
         input_flows (numpy.array): Flows on the entry nodes.
 
@@ -379,9 +379,9 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
     """
 
     if graph is not None:
-
-        degrees = GRAPH_HELPER.get_degrees(graph)
-        cc_mask = GRAPH_HELPER.get_cc_mask(graph)
+        assert isinstance(graph, Graph)
+        degrees = graph.degrees
+        cc_mask = graph.cc_mask
 
         # Compute nodes of degree 1 where blood flows out
         boundary_nodes_mask = (degrees == 1) & cc_mask
@@ -407,7 +407,7 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
     """Simulate vasodilation according to the Ornstein-Uhlenbeck process.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (Graph): graph containing point vasculature skeleton.
         dt (float): time-step.
         nb_iteration (int): number of iteration.
         nb_iteration_noise (int): number of time steps with non-zero noise.
@@ -433,6 +433,7 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
     kappa_a, sigma_a = None, None
 
     if graph is not None:
+        assert isinstance(graph, Graph)
         ge = graph.edge_properties["radius_origin"]
         # calibrate kappa for capillaries
         # We calibrate only for the first radius.
@@ -531,7 +532,7 @@ def simulate_ou_process(
     """Update value according to the reflected Ornstein-Ulenbeck.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
         params (dict): general parameters for vasculature.
         entry_nodes (numpy.array:): (nb_entry_nodes,) ids of entry_nodes.
         simulation_time (float): total time of the simulation, in seconds.
@@ -613,7 +614,7 @@ def construct_static_incidence_matrix(graph):
     """Compute the oriented graph opposite and transposed incidence matrix for static computations.
 
     Args:
-        graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
+        graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
         scipy.sparse.csc_matrix: returns the opposite and transposed incidence matrix of graph
@@ -639,7 +640,6 @@ def _solve_linear(laplacian, input_flow):
     """
 
     if MPI_RANK == 0:
-
         if sp.issparse(input_flow):
             input_flow = input_flow.toarray()
 

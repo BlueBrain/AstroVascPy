@@ -7,7 +7,6 @@ import numpy.testing as npt
 import pandas as pd
 import pytest
 from scipy import sparse as sp
-from vascpy import PointVasculature
 
 from astrovascpy import bloodflow as tested
 from astrovascpy import utils
@@ -40,10 +39,9 @@ def test_compute_edge_resistances():
 
 
 def test_set_edge_resistances(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
+    graph = utils.Graph(point_properties, edge_properties)
     radii = np.array([1, 1.25])
     resistances = tested.compute_edge_resistances(radii, blood_viscosity=1.2e-6)
-    utils.set_edge_data(graph)
     tested.set_edge_resistances(graph, blood_viscosity=1.2e-6, with_hematocrit=True)
     npt.assert_allclose(resistances, graph.edge_properties["resistances"])
     with pytest.raises(BloodFlowError):
@@ -53,7 +51,7 @@ def test_set_edge_resistances(point_properties, edge_properties):
 
 
 def test_set_endfeet_ids(point_properties, edge_properties, caplog):
-    graph = PointVasculature(point_properties, edge_properties)
+    graph = utils.Graph(point_properties, edge_properties)
     graph.edge_properties["endfeet_id"] = [np.nan, np.nan]
     edge_ids = [(0, 1)]
     endfeet_ids = [1]
@@ -79,8 +77,7 @@ def test_get_radii_at_endfeet(point_properties, edge_properties):
     """Verifying that the function returns a list of pairs (endfeet, radii),
     where endfeet_id are different from -1
     """
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     edge_ids = [(0, 1)]  # (section, segment)
     endfeet_ids = [2]
     tested.set_endfeet_ids(graph, edge_ids, endfeet_ids)
@@ -91,8 +88,7 @@ def test_get_radii_at_endfeet(point_properties, edge_properties):
 
 
 def test_get_radius_at_endfoot(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     endfoot_id = 1
     section_id = 0
     segment_id = 0
@@ -110,8 +106,7 @@ def test_get_radius_at_endfoot(point_properties, edge_properties):
 
 def test_set_radii_at_endfeet(point_properties, edge_properties):
     """Verify setting of radii where there are endfeet."""
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     edge_ids = [(0, 1)]
     endfeet_ids = [2]
     tested.set_endfeet_ids(graph, edge_ids, endfeet_ids)
@@ -123,8 +118,7 @@ def test_set_radii_at_endfeet(point_properties, edge_properties):
 
 
 def test_set_radius_at_endfoot(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     section_id = 0
     segment_id = 0
     endfeet_length = 1
@@ -140,8 +134,7 @@ def test_set_radius_at_endfoot(point_properties, edge_properties):
 
 
 def test_set_endfoot_id(point_properties, edge_properties, caplog):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     section_id = 0
     segment_id = 0
     endfeet_id = 1
@@ -173,8 +166,7 @@ def test_set_endfoot_id(point_properties, edge_properties, caplog):
 
 
 def test_get_closest_edges(point_properties, edge_properties, caplog):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
 
     (section_id, segment_id) = (0, 0)
     endfeet_length = -1
@@ -194,8 +186,7 @@ def test_get_closest_edges(point_properties, edge_properties, caplog):
 
 
 def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     dt = 0.01
     nb_iteration = 100
     nb_iteration_noise = 2
@@ -231,8 +222,7 @@ def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
 
 
 def test_simulate_ou_process(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
 
     dt = 0.01
     nb_iteration = 100
@@ -285,8 +275,7 @@ def test_depth_first_search():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     current_edge = (0, 2)
     current_distance = 0.5
     results = tested._depth_first_search(graph, current_edge, current_distance)
@@ -320,8 +309,7 @@ def test_compute_static_laplacian():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
 
     laplacian = tested.compute_static_laplacian(graph, blood_viscosity=1.2e-6).toarray()
 
@@ -418,11 +406,9 @@ def test_update_static_flow_pressure():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     entry_nodes = [0]
     input_flow = len(entry_nodes) * [1.0]
-    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     tested.update_static_flow_pressure(
         graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
@@ -449,7 +435,8 @@ def test_total_flow_conservation_in_graph():
     TEST_DIR = Path(__file__).resolve().parent.parent
     graph_path_cc = TEST_DIR / "examples/data/graphs_folder/toy_graph.bin"
     filehandler = open(graph_path_cc, "rb")
-    graph = pickle.load(filehandler)
+    pv = pickle.load(filehandler)
+    graph = utils.Graph.from_point_vasculature(pv)
 
     entry_nodes = [123, 144, 499]
     input_flows = [1] * len(entry_nodes)
@@ -463,7 +450,6 @@ def test_total_flow_conservation_in_graph():
     transp_incidence = tested.construct_static_incidence_matrix(graph)
     incidence = transp_incidence.T
 
-    utils.GRAPH_HELPER.reset()
     boundary_flows = tested.boundary_flows_A_based(graph, entry_nodes, input_flows)
 
     npt.assert_allclose(
@@ -531,13 +517,11 @@ def test_conservation_flow():
             names=["section_id", "segment_id"],
         ),
     )
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
 
     entry_nodes = [0]
     input_flow = len(entry_nodes) * [1.0]
 
-    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
 
     tested.update_static_flow_pressure(
@@ -552,7 +536,7 @@ def test_conservation_flow():
 
 
 def test_static_construct_incidence_matrix(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
+    graph = utils.Graph(point_properties, edge_properties)
     npt.assert_allclose(
         tested.construct_static_incidence_matrix(graph).toarray(),
         np.array([[1, -1, 0], [0, 1, -1]]),
@@ -560,12 +544,10 @@ def test_static_construct_incidence_matrix(point_properties, edge_properties):
 
 
 def test_solve_linear(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    utils.set_edge_data(graph)
+    graph = utils.Graph(point_properties, edge_properties)
     graph.edge_properties["radius"] = [1, 1.25]
     entry_nodes = [0]
     input_flow = [1.0]
-    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
     adjacency = sp.csr_matrix(
         (graph.n_edges * [1.0], (graph.edges[:, 0], graph.edges[:, 1])),
@@ -584,10 +566,8 @@ def test_solve_linear(point_properties, edge_properties):
 
 
 def test_boundary_flows_A_based(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
+    graph = utils.Graph(point_properties, edge_properties)
     graph.edge_properties["radius"] = [1, 1.25]
-    utils.set_edge_data(graph)
 
-    utils.GRAPH_HELPER.reset()
     boundary_flow = tested.boundary_flows_A_based(graph, [0], [1])
     npt.assert_allclose(boundary_flow, np.array([1.0, 0.0, -1.0]), rtol=2e-6)

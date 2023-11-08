@@ -59,8 +59,7 @@ def test_find_degrees_of_neighbors(point_properties, edge_properties):
 
 
 def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
-    graph = PointVasculature(point_properties, edge_properties)
-    test_module.GRAPH_HELPER.reset()
+    graph = test_module.Graph(point_properties, edge_properties)
     params = {
         "max_nb_inputs": 1,
         "depth_ratio": 1,
@@ -131,8 +130,8 @@ def test_get_large_nodes(point_properties, edge_properties, caplog):
 
 def test_compute_edge_data(point_properties, edge_properties):
     # length = [2, 2], radii  = [1, 1.25]
-    graph = PointVasculature(point_properties, edge_properties)
-    edge_lengths, edge_radii, edge_volume = test_module.compute_edge_data(graph)
+    graph = test_module.Graph(point_properties, edge_properties)
+    edge_lengths, edge_radii, edge_volume = graph._compute_edge_data()
     npt.assert_array_equal(edge_lengths, np.array(np.sqrt([2, 2])))
     npt.assert_array_equal(edge_radii, np.array([1, 1.25]))
     npt.assert_array_equal(
@@ -141,12 +140,12 @@ def test_compute_edge_data(point_properties, edge_properties):
 
 
 def test_set_edge_data(point_properties, edge_properties):
-    graph = PointVasculature(point_properties, edge_properties)
-    lengths, radii, volume = test_module.compute_edge_data(graph)
-    test_module.set_edge_data(graph)
-    npt.assert_allclose(lengths, graph.edge_properties["length"])
-    npt.assert_allclose(radii, graph.edge_properties["radius"])
-    npt.assert_allclose(volume, graph.edge_properties["volume"])
+    graph = test_module.Graph(point_properties, edge_properties)
+    npt.assert_allclose(np.array(np.sqrt([2, 2])), graph.edge_properties.length)
+    npt.assert_allclose(np.array([1, 1.25]), graph.edge_properties.radius)
+    npt.assert_allclose(
+        np.array([np.sqrt(2) * np.pi, 1.25**2 * np.sqrt(2) * np.pi]), graph.edge_properties.volume
+    )
 
 
 def test_is_iterable():
