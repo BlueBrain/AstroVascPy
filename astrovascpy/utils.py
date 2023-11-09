@@ -300,7 +300,9 @@ def create_entry_largest_nodes(graph, params):
         max_position = np.max(positions[:, vasc_axis])
         min_position = np.min(positions[:, vasc_axis])
         depth_max = max_position - (max_position - min_position) * depth_ratio
-        sliced_ids = np.where(cc_mask & (degrees == 1) & (positions[:, vasc_axis] >= depth_max))[0]
+        sliced_ids = np.where(cc_mask & (degrees == 1) & (graph.points[:, vasc_axis] >= depth_max))[
+            0
+        ]
         if sliced_ids.size == 0:
             raise BloodFlowError("Found zero nodes matching our conditions.")
         if sliced_ids.size < n_nodes:
