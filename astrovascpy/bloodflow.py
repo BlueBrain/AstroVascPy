@@ -28,10 +28,10 @@ from tqdm import tqdm
 
 from astrovascpy import ou
 from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.scipy_petsc_conversions import BinaryIO2PETScVec
 from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
+from astrovascpy.scipy_petsc_conversions import distribute_array
 from astrovascpy.utils import Graph
 from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
@@ -478,15 +478,8 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         endfeet_id = graph.edge_properties.loc[:, "endfeet_id"].to_numpy()
 
     # Distribute vectors across MPI ranks
-    radius_origin_petsc = array2PETScVec(radius_origin if MPI_RANK == 0 else [])
-    endfeet_id_petsc = BinaryIO2PETScVec(endfeet_id if MPI_RANK == 0 else [], "tempVec.dat")
-
-    # Each MPI rank/core deals with a chunk of the global vectors
-    radius_origin = radius_origin_petsc.getArray()
-    radius_origin = radius_origin.astype(FLOAT)
-
-    endfeet_id = endfeet_id_petsc.getArray()
-    endfeet_id = endfeet_id.astype(int)
+    radius_origin = distribute_array(radius_origin if MPI_RANK == 0 else [])
+    endfeet_id = distribute_array(endfeet_id if MPI_RANK == 0 else [])
 
     seed = 1
     for radius_origin_, endfeet_id_ in zip(radius_origin, endfeet_id):

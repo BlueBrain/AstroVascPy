@@ -9,6 +9,7 @@ from astrovascpy.scipy_petsc_conversions import PETScMat2coo
 from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
+from astrovascpy.scipy_petsc_conversions import distribute_array
 
 # pip install pytest-mpi
 # mpirun -n 4 pytest --with-mpi tests/test_mpi.py
@@ -17,6 +18,37 @@ from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
 
 COMM = MPI.COMM_WORLD
 RANK = COMM.Get_rank()
+
+
+@pytest.mark.mpi(min_size=4)
+def test_distribute_array():
+    """Test that a numpy array is distributed correctly among ranks"""
+
+    if RANK == 0:
+        vec = np.array([-6, -5, -4, -3], dtype=np.int32)
+    if RANK == 1:
+        vec = np.array([-2, -1, 0], dtype=np.int32)
+    if RANK == 2:
+        vec = np.array([1, 2, 3], dtype=np.int32)
+    if RANK == 3:
+        vec = np.array([4, 5, 6], dtype=np.int32)
+
+    if RANK == 0:
+        v = np.arange(-6, 7, dtype=np.int32)
+    else:
+        v = None
+
+    vloc = distribute_array(v, array_type=None)
+
+    vec_type = vec.dtype == vloc.dtype  # same type
+    is_equal = np.array_equal(vec, vloc)  # same elements
+
+    vec_type_0 = COMM.reduce(vec_type, op=MPI.LAND, root=0)
+    is_equal_0 = COMM.reduce(is_equal, op=MPI.LAND, root=0)
+
+    if RANK == 0:
+        assert vec_type_0 is True
+        assert is_equal_0 is True
 
 
 @pytest.mark.mpi(min_size=2)
