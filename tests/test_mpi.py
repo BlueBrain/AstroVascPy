@@ -20,9 +20,11 @@ COMM = MPI.COMM_WORLD
 RANK = COMM.Get_rank()
 
 
-@pytest.mark.mpi(min_size=4)
+@pytest.mark.mpi(min_size=2)
 def test_distribute_array():
-    """Test that a numpy array is distributed correctly among ranks"""
+    """Test that a numpy array is distributed correctly among 4 ranks"""
+
+    assert COMM.Get_size() == 4  # this test only works with 4 ranks
 
     if RANK == 0:
         vec = np.array([-6, -5, -4, -3], dtype=np.int32)
@@ -40,15 +42,15 @@ def test_distribute_array():
 
     vloc = distribute_array(v, array_type=None)
 
-    vec_type = vec.dtype == vloc.dtype  # same type
-    is_equal = np.array_equal(vec, vloc)  # same elements
+    is_same_type = vec.dtype == vloc.dtype  # same type
+    is_same_vec = np.array_equal(vec, vloc)  # same elements
 
-    vec_type_0 = COMM.reduce(vec_type, op=MPI.LAND, root=0)
-    is_equal_0 = COMM.reduce(is_equal, op=MPI.LAND, root=0)
+    is_same_type_0 = COMM.reduce(is_same_type, op=MPI.LAND, root=0)
+    is_same_vec_0 = COMM.reduce(is_same_vec, op=MPI.LAND, root=0)
 
     if RANK == 0:
-        assert vec_type_0 is True
-        assert is_equal_0 is True
+        assert is_same_type_0 is True
+        assert is_same_vec_0 is True
 
 
 @pytest.mark.mpi(min_size=2)
