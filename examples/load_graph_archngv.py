@@ -94,7 +94,8 @@ if __name__ == '__main__':
     print(f"number of physical CPU cores = {n_cores}")
 
     print(f"loading circuit : start")
-    filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
+    # filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
+    filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/20210325"
     graph = load_graph_archngv_parallel(filename_ngv, n_workers=n_cores) # n_astro=50 for debugging (smaller processing needs)
     print(f"loading circuit : finish")
 
