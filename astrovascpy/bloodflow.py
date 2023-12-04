@@ -17,6 +17,7 @@ import warnings
 from functools import partial
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from mpi4py import MPI as mpi
 from petsc4py import PETSc
@@ -79,11 +80,11 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
 
 
 def update_static_flow_pressure(
-    graph,
-    input_flow,
-    blood_viscosity,
-    base_pressure,
-    with_hematocrit=True,
+    graph: Graph,
+    input_flow: npt.NDArray[np.float64],
+    blood_viscosity: float,
+    base_pressure: float,
+    with_hematocrit: bool = True,
 ):
     """Compute the time-independent pressure and flow.
 
@@ -93,6 +94,10 @@ def update_static_flow_pressure(
         blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
         base_pressure (float): minimum pressure in the output edges
         with_hematocrit (bool): consider hematrocrit for resistance model
+
+    Concerns: This function is part of the public API. Any change of signature
+    or functional behavior may be done thoroughly.
+
     """
     if graph is not None:
         entry_flow = input_flow[input_flow > 0]
@@ -366,7 +371,9 @@ def _depth_first_search(graph, current_edge, current_distance, visited=None):
     return result_ids
 
 
-def boundary_flows_A_based(graph, entry_nodes, input_flows):
+def boundary_flows_A_based(
+    graph: Graph, entry_nodes: npt.NDArray[np.float64], input_flows: npt.NDArray[np.float64]
+) -> npt.NDArray[np.float64]:
     """Compute the boundary flows on the exit nodes based on their areas.
 
     Args:
@@ -376,10 +383,14 @@ def boundary_flows_A_based(graph, entry_nodes, input_flows):
 
     Returns:
         np.array: boundary flow vector for every node in the graph.
+
+    Concerns: This function is part of the public API. Any change of signature
+    or functional behavior may be done thoroughly.
     """
 
     if graph is not None:
-        assert isinstance(graph, Graph)
+        if not isinstance(graph, Graph):
+            raise BloodFlowError("'graph' parameter must be an instance of Graph")
         degrees = graph.degrees
         cc_mask = graph.cc_mask
 
