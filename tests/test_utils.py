@@ -60,11 +60,6 @@ def test_find_degrees_of_neighbors(point_properties, edge_properties):
 
 def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
     graph = test_module.Graph(point_properties, edge_properties)
-    params = {
-        "max_nb_inputs": 1,
-        "depth_ratio": 1,
-        "vasc_axis": 1,
-    }
 
     with pytest.raises(BloodFlowError):
         test_module.create_entry_largest_nodes(graph, params={"max_nb_inputs": -1.0})
@@ -80,7 +75,7 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
             )
             == np.array([2])
         ).all()
-    assert "The depth_ratio must be <= 1. Taking depth_ratio = 1." in caplog.text
+    assert "'depth_ratio' parameter must be <= 1. Considering depth_ratio = 1." in caplog.text
 
     with caplog.at_level(logging.WARNING):
         assert (
@@ -89,7 +84,7 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
             )
             == np.array([2])
         ).all()
-    assert "The depth_ratio must be >= 0. Taking depth_ratio = 0." in caplog.text
+    assert "'depth_ratio' parameter must be >= 0. Considering depth_ratio = 0." in caplog.text
 
 
 def test_get_largest_nodes(point_properties, edge_properties, caplog):

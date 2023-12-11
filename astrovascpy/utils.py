@@ -26,7 +26,8 @@ from mpi4py import MPI
 from scipy.signal import find_peaks_cwt
 from scipy.sparse.csgraph import connected_components
 
-from astrovascpy.exceptions import BloodFlowError
+from .exceptions import BloodFlowError
+from .typing import VasculatureParams
 
 # dtypes for the different node and edge ids. We are using np.int64 to avoid the infamous
 # https://github.com/numpy/numpy/issues/15084 numpy problem. This type needs to be used for
@@ -46,6 +47,9 @@ MPI_RANK = MPI.COMM_WORLD.Get_rank()
 class Graph(vascpy.PointVasculature):
     """Wrapper on top of a vascpy.PointVasculator providing
     additional graph-related capabilities
+
+    Concerns: This class is part of the public API. Any change of signature
+    or functional behavior may be done thoroughly.
     """
 
     def __init__(self, *args, **kwargs):
@@ -257,8 +261,8 @@ def reduce_graph(graph, to_keep_labels):
     return Graph(new_node_properties, new_edge_properties)
 
 
-def create_entry_largest_nodes(graph, params):
-    """Get largest nodes of degree 1 for input in the largest connected components.
+def create_entry_largest_nodes(graph: Graph, params: VasculatureParams):
+    """Get the largest nodes of degree 1 for input in the largest connected components.
 
     Args:
         graph (Graph): graph containing point vasculature skeleton.
@@ -269,29 +273,30 @@ def create_entry_largest_nodes(graph, params):
 
     Raises:
         BloodFlowError: if n_nodes <= 0 or if vasc_axis is not 0, 1 or 2.
+
+    Concerns: This function is part of the public API. Any change of signature
+    or functional behavior may be done thoroughly.
     """
     if graph is not None:
-        assert isinstance(graph, Graph)
-        if (
-            "max_nb_inputs" not in params
-            or "depth_ratio" not in params
-            or "vasc_axis" not in params
-        ):
-            raise BloodFlowError("params should contain depth_ratio and max_nb_inputs")
+        if not isinstance(graph, Graph):
+            raise BloodFlowError("'graph' parameter must be an instance of Graph")
+        for param in VasculatureParams.__annotations__:
+            if param not in params:
+                raise BloodFlowError(f"Missing parameter '{param}'")
         n_nodes = params["max_nb_inputs"]
         depth_ratio = params["depth_ratio"]
         vasc_axis = params["vasc_axis"]
 
         if n_nodes < 1:
-            raise BloodFlowError("Please provide n_nodes >= 1.")
+            raise BloodFlowError("'max_nb_inputs' parameter must be >= 1.")
         if vasc_axis < 0 or vasc_axis > 2:
-            raise BloodFlowError("The vasc_axis should be 0, 1 or 2.")
+            raise BloodFlowError("'vasc_axis' parameter must be 0, 1 or 2.")
         if depth_ratio < 0:
             depth_ratio = 0.0
-            L.warning("The depth_ratio must be >= 0. Taking depth_ratio = 0.")
+            L.warning("'depth_ratio' parameter must be >= 0. Considering depth_ratio = 0.")
         if depth_ratio > 1:
             depth_ratio = 1.0
-            L.warning("The depth_ratio must be <= 1. Taking depth_ratio = 1.")
+            L.warning("'depth_ratio' parameter must be <= 1. Considering depth_ratio = 1.")
 
         degrees = graph.degrees
         cc_mask = graph.cc_mask
@@ -304,7 +309,7 @@ def create_entry_largest_nodes(graph, params):
             0
         ]
         if sliced_ids.size == 0:
-            raise BloodFlowError("Found zero nodes matching our conditions.")
+            raise BloodFlowError("Found zero nodes matching conditions.")
         if sliced_ids.size < n_nodes:
             n_nodes = sliced_ids.size
             L.warning("Too few nodes matching conditions.")
