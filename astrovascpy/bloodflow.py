@@ -398,7 +398,7 @@ def boundary_flows_A_based(
         boundary_nodes_mask = (degrees == 1) & cc_mask
         graph_1 = graph.node_properties.loc[boundary_nodes_mask]
 
-        boundary_flows = np.zeros(shape=graph.n_nodes, dtype=np.float64)  # initialize
+        boundary_flows = np.zeros(shape=graph.n_nodes)  # initialize
         boundary_flows[entry_nodes] = input_flows  # set input flow
 
         areas = np.pi * (graph_1["diameter"] / 2) ** 2
