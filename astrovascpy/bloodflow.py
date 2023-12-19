@@ -398,10 +398,11 @@ def boundary_flows_A_based(
         boundary_nodes_mask = (degrees == 1) & cc_mask
         graph_1 = graph.node_properties.loc[boundary_nodes_mask]
 
-        boundary_flows = np.zeros(shape=graph.n_nodes)  # initialize
+        boundary_flows = np.zeros(shape=graph.n_nodes, dtype=np.float64)  # initialize
         boundary_flows[entry_nodes] = input_flows  # set input flow
 
         areas = np.pi * (graph_1["diameter"] / 2) ** 2
+        areas = areas.astype(np.float64)
         # set to 0 the area on entry nodes in order to have 0 weight
         areas[entry_nodes] = 0
         tot_area = areas.sum()
@@ -602,6 +603,7 @@ def simulate_ou_process(
 
             radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].to_numpy()
             input_flows = entry_speed[time_it] * np.pi * radii_at_entry_edges**2
+            input_flows = input_flows.astype(np.float64)
         else:
             input_flows = None
 
