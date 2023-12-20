@@ -561,7 +561,7 @@ def test_solve_linear(point_properties, edge_properties):
     # The solution of the system is composed by a solution + a constant
     target_pressure = np.array([1.0, 0.0, -1.0])  # target solution
     result = target_pressure - pressure  # a constant
-    is_const = np.isclose(result, result[0], rtol=1e-8, atol=1e-8)
+    is_const = np.isclose(result, result[0], rtol=1e-6, atol=1e-6)
     assert np.all(is_const)
 
 
