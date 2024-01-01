@@ -48,13 +48,11 @@ def load_graph(filename):
     raise BloodFlowError("File object type identified by filename is not supported")
 
 
-def load_graph_from_bin(filename, is_cc=False):
+def load_graph_from_bin(filename):
     """
     Loading of a graph from a binary file using pickle.
     Args:
         filename (str): vasculature dataset path.
-        save_cc (bool): if True the graph is assumed to be fully connected and
-        the computation of the main connected component is skipped
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """
@@ -71,13 +69,11 @@ def load_graph_from_bin(filename, is_cc=False):
         return None
 
 
-def load_graph_from_h5(filename, is_cc=False):
+def load_graph_from_h5(filename):
     """
     Loading of a graph from a .h5 using PointVasculature.load_sonata.
     Args:
         filename (str): vasculature dataset path.
-        save_cc (bool): if True the graph is assumed to be fully connected and
-        the computation of the main connected component is skipped
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """
@@ -93,7 +89,7 @@ def load_graph_from_h5(filename, is_cc=False):
         return None
 
 
-def load_graph_from_csv(node_filename, edge_filename, is_cc=False):
+def load_graph_from_csv(node_filename, edge_filename):
     """
     Loading of node dataset and edge dataset using pandas.
     It creates a PointVasculature graph object.
@@ -101,8 +97,6 @@ def load_graph_from_csv(node_filename, edge_filename, is_cc=False):
     Args:
         node_filename (str): node dataset path.
         edge_filename (str): edge dataset path.
-        save_cc (bool): if True the graph is assumed to be fully connected and
-        the computation of the main connected component is skipped
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """

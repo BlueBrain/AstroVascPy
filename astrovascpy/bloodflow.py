@@ -166,7 +166,7 @@ def compute_edge_resistances(radii, blood_viscosity, with_hematocrit=True):
     if with_hematocrit:
         resistances *= 4 * (1.0 - 0.863 * np.exp(-radii / 14.3) + 27.5 * np.exp(-radii / 0.351))
 
-    return resistances.astype(np.float64)
+    return resistances
 
 
 def set_edge_resistances(graph, blood_viscosity, with_hematocrit=True):
@@ -400,7 +400,6 @@ def boundary_flows_A_based(
         boundary_flows[entry_nodes] = input_flows  # set input flow
 
         areas = np.pi * (graph_1["diameter"] / 2) ** 2
-        areas = areas.astype(np.float64)
         # set to 0 the area on entry nodes in order to have 0 weight
         areas[entry_nodes] = 0
         tot_area = areas.sum()
@@ -601,7 +600,6 @@ def simulate_ou_process(
 
             radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].to_numpy()
             input_flows = entry_speed[time_it] * np.pi * radii_at_entry_edges**2
-            input_flows = input_flows.astype(np.float64)
         else:
             input_flows = None
 

@@ -64,7 +64,17 @@ class Graph(vascpy.PointVasculature):
         Args:
           graph (vasculatureAPI.PointVasculature): graph containing point vasculature skeleton.
         """
-        return cls(point_vasculature._node_properties, point_vasculature._edge_properties)
+
+        node_prop = point_vasculature._node_properties.astype(np.float64)
+        edge_prop = point_vasculature._edge_properties
+        if "length" in edge_prop.columns:
+            edge_prop["length"] = edge_prop["length"].astype(np.float64)
+        if "radius" in edge_prop.columns:
+            edge_prop["radius"] = edge_prop["radius"].astype(np.float64)
+        if "radius_origin" in edge_prop.columns:
+            edge_prop["radius_origin"] = edge_prop["radius_origin"].astype(np.float64)
+
+        return cls(node_prop, edge_prop)
 
     @cached_property
     def cc_mask(self):
