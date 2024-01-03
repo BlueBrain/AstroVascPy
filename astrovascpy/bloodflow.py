@@ -650,7 +650,8 @@ def _solve_linear(laplacian, input_flow):
     """
 
     WARNING_MSG = textwrap.dedent(
-        """ Number of nodes = %(n_nodes)s.
+        """\
+    Number of nodes = %(n_nodes)s.
     The program can be slow and the result not very accurate.
     It is recommended to use PETSc for a graph with more than 2e6 nodes and
     SciPy for a graph with less than 2e6 nodes.
