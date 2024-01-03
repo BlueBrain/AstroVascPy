@@ -478,8 +478,8 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         endfeet_id = graph.edge_properties.loc[:, "endfeet_id"].to_numpy()
 
     # Distribute vectors across MPI ranks
-    radius_origin = distribute_array(radius_origin if MPI_RANK == 0 else [])
-    endfeet_id = distribute_array(endfeet_id if MPI_RANK == 0 else [])
+    radius_origin = distribute_array(radius_origin if MPI_RANK == 0 else None)
+    endfeet_id = distribute_array(endfeet_id if MPI_RANK == 0 else None)
 
     seed = 1
     for radius_origin_, endfeet_id_ in zip(radius_origin, endfeet_id):
