@@ -13,6 +13,7 @@ limitations under the License.
 import gc
 import logging
 import os
+import textwrap
 import warnings
 from functools import partial
 
@@ -51,11 +52,6 @@ MPI_SIZE = MPI_COMM.Get_size()
 
 
 L = logging.getLogger(__name__)
-warning_msg = "The program can be slow and the result not very accurate.\
-It is recommended to use PETSc for a graph with more than 2e6 nodes and \
-SciPy for a graph with less than 2e6 nodes. \
-The default solver can be selected in setup.sh or by setting the environment \
-variable BACKEND_SOLVER_BFS to 'scipy' or 'petsc'."
 
 
 def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
@@ -653,6 +649,15 @@ def _solve_linear(laplacian, input_flow):
         scipy.sparse.csc_matrix: frequency dependent laplacian matrix
     """
 
+    WARNING_MSG = textwrap.dedent(
+        """ Number of nodes = %(n_nodes)s.
+    The program can be slow and the result not very accurate.
+    It is recommended to use PETSc for a graph with more than 2e6 nodes and
+    SciPy for a graph with less than 2e6 nodes.
+    The default solver can be selected in setup.sh or by setting the environment
+    variable BACKEND_SOLVER_BFS to 'scipy' or 'petsc'. """
+    )
+
     if MPI_RANK == 0:
         if sparse.issparse(input_flow):
             input_flow = input_flow.toarray()
@@ -665,7 +670,7 @@ def _solve_linear(laplacian, input_flow):
     # in os.getenv() the second argument refers to the default value
     if os.getenv("BACKEND_SOLVER_BFS", "scipy") == "scipy":
         if MPI_RANK == 0 and n_nodes > 2e6:
-            L.warning(f"Number of nodes = {n_nodes}.\n" + warning_msg)
+            L.warning(WARNING_MSG, {"n_nodes": n_nodes})
 
         with mpi_timer.region("Scipy Solver [bloodflow.py]"), mpi_mem.region(
             "Scipy Solver [bloodflow.py]"
@@ -696,7 +701,7 @@ def _solve_linear(laplacian, input_flow):
 
     # PETSc-related part!
     if MPI_RANK == 0 and n_nodes < 2e6:
-        L.warning(f"Number of nodes = {n_nodes}.\n" + warning_msg)
+        L.warning(WARNING_MSG, {"n_nodes": n_nodes})
 
     # These containers are distributed across MPI tasks, contrary to the SciPy ones!
     with mpi_timer.region("PETSc containers [bloodflow.py]"), mpi_mem.region(
