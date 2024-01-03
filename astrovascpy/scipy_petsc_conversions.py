@@ -238,17 +238,18 @@ def coomatrix2PETScMat(L):
 
 def _distribute_array_helper(v, array_type=None):
     """
-    Distributes a numpy array on rank 0 to all ranks using PETSc automatic
-    distribution routine.
+    Scatter a NumPy array from rank 0 to all ranks using PETSc automatic
+    chunk selection routine.
 
     Args:
-        v: numpy array on rank 0, None (or whatever) on other ranks
+        v: NumPy array on rank 0, None (or whatever) on other ranks
         array_type: set the type of the distributed array
                     If None, it keeps the same type as v.
 
     Returns:
-        numpy array distributed on all procs
-        PETSc.Vec distributed array. All values set to zero.
+        numpy.array: distributed array on all procs
+        petsc4py.PETSc.Vec: distributed array on all procs. 
+                            All entries are initialized to zero.
     """
 
     if MPI_RANK == 0:
@@ -293,16 +294,16 @@ def _distribute_array_helper(v, array_type=None):
 
 def distribute_array(v, array_type=None):
     """
-    Distributes a numpy array on rank 0 to all ranks using PETSc automatic
-    distribution routine.
+    Scatter a NumPy array from rank 0 to all ranks using PETSc automatic
+    chunk selection routine.
 
     Args:
-        v: numpy array on rank 0, None (or whatever) on other ranks
+        v: NumPy array on rank 0, None (or whatever) on other ranks
         array_type: set the type of the distributed array
                     If None, it keeps the same type as v.
 
     Returns:
-        numpy array distributed on all procs
+        numpy.array: distributed array on all procs
     """
 
     vloc, x = _distribute_array_helper(v, array_type=array_type)
@@ -317,10 +318,10 @@ def array2PETScVec(v):
     to a distributed PETSc Vec
 
     Args:
-        v: numpy array on proc 0, None (or whatever) on other proc
+        v: NumPy array on proc 0, None (or whatever) on other proc
 
     Returns:
-        PETSc Vec distributed on all procs
+        petsc4py.PETSc.Vec: distributed array on all procs. 
     """
 
     vloc, x = _distribute_array_helper(v, array_type=PETSc.ScalarType)
@@ -338,7 +339,7 @@ def PETScVec2array(x, rank=0):
         rank: rank receiving the numpy array
 
     Returns:
-        numpy array on proc 0
+        NumPy array on proc 0
     """
 
     vloc = x.getArray()
