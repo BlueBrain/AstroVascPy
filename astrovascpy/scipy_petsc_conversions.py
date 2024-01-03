@@ -248,7 +248,7 @@ def _distribute_array_helper(v, array_type=None):
 
     Returns:
         numpy.array: distributed array on all procs
-        petsc4py.PETSc.Vec: distributed array on all procs. 
+        petsc4py.PETSc.Vec: distributed array on all procs.
                             All entries are initialized to zero.
     """
 
@@ -321,7 +321,7 @@ def array2PETScVec(v):
         v: NumPy array on proc 0, None (or whatever) on other proc
 
     Returns:
-        petsc4py.PETSc.Vec: distributed array on all procs. 
+        petsc4py.PETSc.Vec: distributed array on all procs.
     """
 
     vloc, x = _distribute_array_helper(v, array_type=PETSc.ScalarType)

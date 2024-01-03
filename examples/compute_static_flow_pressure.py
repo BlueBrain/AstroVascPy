@@ -178,7 +178,6 @@ if RAT and graph is not None:
         print("end plotting y and z axes")
 
     if plot_xz:
-
         print("start plotting x and z axes")
         figure = plt.figure(figsize=(15, 15))
         positions = graph.points
