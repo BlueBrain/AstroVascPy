@@ -247,9 +247,10 @@ def _distribute_array_helper(v, array_type=None):
                     If None, it keeps the same type as v.
 
     Returns:
-        numpy.array: distributed array on all procs
-        petsc4py.PETSc.Vec: distributed array on all procs.
-                            All entries are initialized to zero.
+        tuple of 2 elements:
+        - numpy.ndarray: distributed array on all processors
+        - petsc4py.PETSc.Vec: distributed array on all processors.
+                              All entries are initialized to zero.
     """
 
     if MPI_RANK == 0:
@@ -303,7 +304,7 @@ def distribute_array(v, array_type=None):
                     If None, it keeps the same type as v.
 
     Returns:
-        numpy.array: distributed array on all procs
+        numpy.ndarray: distributed array on all processors
     """
 
     vloc, x = _distribute_array_helper(v, array_type=array_type)
