@@ -236,27 +236,37 @@ def coomatrix2PETScMat(L):
     return A
 
 
-def array2PETScVec(v):
+def _distribute_array_helper(v, array_type=None):
     """
-    Converts (copies) a sequential array/vector on process 0
-    to a distributed PETSc Vec
+    Scatter a NumPy array from rank 0 to all ranks using PETSc automatic
+    chunk selection routine.
 
     Args:
-        v: numpy array on proc 0, None (or whatever) on other proc
+        v: NumPy array on rank 0, None (or whatever) on other ranks
+        array_type: set the type of the distributed array
+                    If None, it keeps the same type as v.
 
     Returns:
-        PETSc Vec distributed on all procs
+        tuple of 2 elements:
+        - numpy.ndarray: distributed array on all processors
+        - petsc4py.PETSc.Vec: distributed array on all processors.
+                              All entries are initialized to zero.
     """
 
     if MPI_RANK == 0:
         n = len(v)
-        v = v.astype(PETSc.ScalarType)
+        if array_type is None:
+            array_type = v.dtype
+        else:
+            v = v.astype(array_type)
     else:
         n = None
 
-    # Broadcast size
+    # Broadcast size and type
     n = MPI_COMM.bcast(n, root=0)
+    array_type = MPI_COMM.bcast(array_type, root=0)
 
+    # distribute array using PETSc.Vec approach
     x = PETSc.Vec()
     x.create(MPI_COMM)
     x.setSizes(n)
@@ -274,11 +284,48 @@ def array2PETScVec(v):
     if MPI_RANK != 0:
         istart_loc = [0]
 
-    # local vector
-    vloc = np_zeros(nloc, PETSc.ScalarType)
+    # Initialize destination array on each rank
+    vloc = np_zeros(nloc, dtype=array_type)
 
     # scatter the vector v on all ranks
-    MPI_COMM.Scatterv([v, nloc_loc, istart_loc, _from_numpy_dtype(PETSc.ScalarType)], vloc, root=0)
+    MPI_COMM.Scatterv([v, nloc_loc, istart_loc, _from_numpy_dtype(array_type)], vloc, root=0)
+
+    return vloc, x
+
+
+def distribute_array(v, array_type=None):
+    """
+    Scatter a NumPy array from rank 0 to all ranks using PETSc automatic
+    chunk selection routine.
+
+    Args:
+        v: NumPy array on rank 0, None (or whatever) on other ranks
+        array_type: set the type of the distributed array
+                    If None, it keeps the same type as v.
+
+    Returns:
+        numpy.ndarray: distributed array on all processors
+    """
+
+    vloc, x = _distribute_array_helper(v, array_type=array_type)
+    x.destroy()  # Free the memory of the PETSc vec
+
+    return vloc
+
+
+def array2PETScVec(v):
+    """
+    Converts (copies) a sequential array/vector on process 0
+    to a distributed PETSc Vec
+
+    Args:
+        v: NumPy array on proc 0, None (or whatever) on other proc
+
+    Returns:
+        petsc4py.PETSc.Vec: distributed array on all procs.
+    """
+
+    vloc, x = _distribute_array_helper(v, array_type=PETSc.ScalarType)
     x.setArray(vloc)
 
     return x
@@ -293,7 +340,7 @@ def PETScVec2array(x, rank=0):
         rank: rank receiving the numpy array
 
     Returns:
-        numpy array on proc 0
+        NumPy array on proc 0
     """
 
     vloc = x.getArray()

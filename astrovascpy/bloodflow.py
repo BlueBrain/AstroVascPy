@@ -29,10 +29,10 @@ from tqdm import tqdm
 
 from astrovascpy import ou
 from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.scipy_petsc_conversions import BinaryIO2PETScVec
 from astrovascpy.scipy_petsc_conversions import PETScVec2array
 from astrovascpy.scipy_petsc_conversions import array2PETScVec
 from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
+from astrovascpy.scipy_petsc_conversions import distribute_array
 from astrovascpy.utils import Graph
 from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
@@ -323,7 +323,7 @@ def get_closest_edges(args, graph):
         graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
-        numpy.array: list of edges close to the original edge id.
+        np.ndarray: list of edges close to the original edge id.
 
     Raises:
         BloodFlowError: if endfoot_id does not correspond to a real endfoot id in the graph.
@@ -347,7 +347,7 @@ def _depth_first_search(graph, current_edge, current_distance, visited=None):
         visited (set): list of all edges that have been visited so far.
 
     Returns:
-        numpy.array: list of edges close to the original edge id.
+        np.ndarray: list of edges close to the original edge id.
     """
     if visited is None:
         visited = set()
@@ -381,7 +381,7 @@ def boundary_flows_A_based(
         input_flows (numpy.array): Flows on the entry nodes.
 
     Returns:
-        np.array: boundary flow vector for every node in the graph.
+        np.ndarray: boundary flow vector for every node in the graph.
 
     Concerns: This function is part of the public API. Any change of signature
     or functional behavior may be done thoroughly.
@@ -425,7 +425,7 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
 
 
     Returns:
-        np.array: (endfeet_id, time-step, nb_of_edge_per_endfoot) array where each edge
+        np.ndarray: (endfeet_id, time-step, nb_of_edge_per_endfoot) array where each edge
         is linked to the endfoot located at the edge's position.
     """
     radii_at_endfeet = []  # matrix: rows = number of radii, columns = time points
@@ -477,15 +477,8 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         endfeet_id = graph.edge_properties.loc[:, "endfeet_id"].to_numpy()
 
     # Distribute vectors across MPI ranks
-    radius_origin_petsc = array2PETScVec(radius_origin if MPI_RANK == 0 else [])
-    endfeet_id_petsc = BinaryIO2PETScVec(endfeet_id if MPI_RANK == 0 else [], "tempVec.dat")
-
-    # Each MPI rank/core deals with a chunk of the global vectors
-    radius_origin = radius_origin_petsc.getArray()
-    radius_origin = radius_origin.astype(np.float64)
-
-    endfeet_id = endfeet_id_petsc.getArray()
-    endfeet_id = endfeet_id.astype(int)
+    radius_origin = distribute_array(radius_origin if MPI_RANK == 0 else None)
+    endfeet_id = distribute_array(endfeet_id if MPI_RANK == 0 else None)
 
     seed = 1
     for radius_origin_, endfeet_id_ in zip(radius_origin, endfeet_id):
@@ -552,9 +545,10 @@ def simulate_ou_process(
         params (dict): general parameters for vasculature.
 
     Returns:
-        numpy.array: (nb_iteration, n_edges) flow values at each time-step for each edge,
-        numpy.array: (nb_iteration, n_nodes) pressure values at each time-step for each edge,
-        numpy.array: (nb_iteration, n_edges) radius values at each time-step for each edge.
+        tuple of 3 elements:
+        - np.ndarray: (nb_iteration, n_edges) flow values at each time-step for each edge,
+        - np.ndarray: (nb_iteration, n_nodes) pressure values at each time-step for each edge,
+        - np.ndarray: (nb_iteration, n_edges) radius values at each time-step for each edge.
     """
 
     BLOOD_VISCOSITY = params["blood_viscosity"]
