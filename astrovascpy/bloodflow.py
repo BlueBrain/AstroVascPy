@@ -13,6 +13,7 @@ limitations under the License.
 import gc
 import logging
 import os
+import textwrap
 import warnings
 from functools import partial
 
@@ -52,8 +53,6 @@ MPI_SIZE = MPI_COMM.Get_size()
 
 L = logging.getLogger(__name__)
 
-FLOAT = np.float64
-
 
 def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
     """Compute the time-independent Laplacian.
@@ -74,7 +73,7 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
     adjacency = sparse.csr_matrix(
         (1.0 / resistances, (graph.edges[:, 0], graph.edges[:, 1])),
         shape=(graph.n_nodes, graph.n_nodes),
-        dtype=FLOAT,
+        dtype=np.float64,
     )
     return sparse.csgraph.laplacian(adjacency + adjacency.T)
 
@@ -168,7 +167,7 @@ def compute_edge_resistances(radii, blood_viscosity, with_hematocrit=True):
     if with_hematocrit:
         resistances *= 4 * (1.0 - 0.863 * np.exp(-radii / 14.3) + 27.5 * np.exp(-radii / 0.351))
 
-    return resistances.astype(FLOAT)
+    return resistances
 
 
 def set_edge_resistances(graph, blood_viscosity, with_hematocrit=True):
@@ -516,7 +515,7 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
 
     rae = np.empty(1)
     if MPI_RANK == 0:
-        rae = np.empty((np.sum(rae_rows), radii_at_endfeet.shape[1]), dtype=FLOAT)
+        rae = np.empty((np.sum(rae_rows), radii_at_endfeet.shape[1]), dtype=np.float64)
         rae[: rae_rows[0]] = radii_at_endfeet
 
     for iproc in range(1, MPI_SIZE):
@@ -644,19 +643,31 @@ def _solve_linear(laplacian, input_flow):
         scipy.sparse.csc_matrix: frequency dependent laplacian matrix
     """
 
+    WARNING_MSG = textwrap.dedent(
+        """\
+        Number of nodes = %(n_nodes)s.
+        The program can be slow and the result not very accurate.
+        It is recommended to use PETSc for a graph with more than 2e6 nodes and
+        SciPy for a graph with less than 2e6 nodes.
+        The default solver can be selected in setup.sh or by setting the environment
+        variable BACKEND_SOLVER_BFS to 'scipy' or 'petsc'.\
+    """
+    )
+
     if MPI_RANK == 0:
         if sparse.issparse(input_flow):
             input_flow = input_flow.toarray()
 
-        result = np.zeros(np.shape(laplacian)[0], dtype=laplacian.dtype)
+        n_nodes = np.shape(laplacian)[0]
+        result = np.zeros(shape=n_nodes, dtype=laplacian.dtype)
     else:
         result = None
 
     # in os.getenv() the second argument refers to the default value
-    if (
-        bool(int(os.getenv("DEBUG_BFS", "0")))
-        or os.getenv("BACKEND_SOLVER_BFS", "petsc") == "scipy"
-    ):
+    if os.getenv("BACKEND_SOLVER_BFS", "scipy") == "scipy":
+        if MPI_RANK == 0 and n_nodes > 2e6:
+            L.warning(WARNING_MSG, {"n_nodes": n_nodes})
+
         with mpi_timer.region("Scipy Solver [bloodflow.py]"), mpi_mem.region(
             "Scipy Solver [bloodflow.py]"
         ):
@@ -678,10 +689,15 @@ def _solve_linear(laplacian, input_flow):
                         laplacian += factor * sparse.eye(np.shape(laplacian)[0])
                         result = linalg.spsolve(laplacian, input_flow)
 
-    if os.getenv("BACKEND_SOLVER_BFS", "petsc") == "scipy":
+    if os.getenv("BACKEND_SOLVER_BFS", "scipy") == "scipy":
+        if bool(int(os.getenv("DEBUG_BFS", "0"))) and (MPI_RANK == 0):
+            scipy_res_norm = np.linalg.norm(input_flow - laplacian * result)
+            PETSc.Sys.Print(f"-> SciPy residual norm = {scipy_res_norm}")
         return result
 
     # PETSc-related part!
+    if MPI_RANK == 0 and n_nodes < 2e6:
+        L.warning(WARNING_MSG, {"n_nodes": n_nodes})
 
     # These containers are distributed across MPI tasks, contrary to the SciPy ones!
     with mpi_timer.region("PETSc containers [bloodflow.py]"), mpi_mem.region(
@@ -691,14 +707,21 @@ def _solve_linear(laplacian, input_flow):
         input_flow_petsc = array2PETScVec(input_flow if MPI_RANK == 0 else [])
         result_petsc = array2PETScVec(result if MPI_RANK == 0 else [])
 
+        # create the nullspace of the laplacian
+        one_vec = np.ones(shape=len(input_flow)) if MPI_RANK == 0 else None
+        null_vec = array2PETScVec(one_vec if MPI_RANK == 0 else [])
+        null_space = PETSc.NullSpace().create(null_vec)
+        laplacian_petsc.setNullSpace(null_space)
+
     opts = PETSc.Options()
     # solver
-    opts["ksp_type"] = "gmres"
+    opts["ksp_type"] = "lgmres"
     opts["ksp_gmres_restart"] = 100
     # preconditioner
     opts["pc_type"] = "gamg"
     opts["pc_factor_shift_type"] = "NONZERO"
     opts["pc_factor_shift_amount"] = PETSc.DECIDE
+
     # progress
     if bool(int(os.getenv("VERBOSE_BFS", "0"))):
         opts["ksp_monitor"] = None
@@ -707,7 +730,7 @@ def _solve_linear(laplacian, input_flow):
     petsc_solver.setOperators(laplacian_petsc)
     petsc_solver.rtol = 1e-12
     # petsc_solver.atol = 1e-9
-    petsc_solver.max_it = 5e2
+    petsc_solver.max_it = 1e3
     petsc_solver.setFromOptions()
 
     PETSc.Sys.Print("-> PETSc Solver [bloodflow.py] : Start")
@@ -725,15 +748,22 @@ def _solve_linear(laplacian, input_flow):
 
     petsc_res_norm = None
     if MPI_RANK == 0:
-        petsc_res_norm = np.linalg.norm(input_flow - laplacian * result_petsc_sp)
-    PETSc.Sys.Print(f"-> PETSc residual norm = {petsc_res_norm}")
+        if petsc_solver.getIterationNumber() == petsc_solver.max_it:
+            L.warning(f"Reached maximum number of iteration {petsc_solver.max_it}.")
 
     if bool(int(os.getenv("DEBUG_BFS", "0"))) and MPI_RANK == 0:
-        scipy_res_norm = np.linalg.norm(input_flow - laplacian * result)
-        print(f"-> SciPy residual norm = {scipy_res_norm}")
-        assert np.allclose(
-            petsc_res_norm, scipy_res_norm, rtol=1e-6, atol=1e-6
-        ), "PETSc gives different solution compared to SciPy!"
+        petsc_res_norm = np.linalg.norm(input_flow - laplacian * result_petsc_sp)  # l2 norm
+        input_flow_norm = np.linalg.norm(input_flow)
+        PETSc.Sys.Print("Laplacian matrix size: ", np.shape(laplacian))
+        PETSc.Sys.Print(f"-> PETSc solver = {opts['ksp_type']}, preconditioner = {opts['pc_type']}")
+        PETSc.Sys.Print(f"-> PETSc residual l2 norm = {petsc_res_norm}")
+        PETSc.Sys.Print(f"-> The norm of input_flow is: {input_flow_norm}")
+        PETSc.Sys.Print(
+            f"-> Relative norm: ||residuals|| / ||input_flow|| = {petsc_res_norm/input_flow_norm}"
+        )
+        PETSc.Sys.Print(
+            f"-> The KSP preconditioned residual norm is: {petsc_solver.getResidualNorm()}"
+        )
 
     if MPI_RANK == 0:
         result = result_petsc_sp

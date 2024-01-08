@@ -73,7 +73,7 @@ fi
 
 # Backend solver/library for the linear systems
 # petsc or scipy
-export BACKEND_SOLVER_BFS='petsc'
+export BACKEND_SOLVER_BFS='scipy'
 
 # Run the SciPy solver and compare the result with the PETSc one [which is the default]!
 # 0 : False / 1 : True
