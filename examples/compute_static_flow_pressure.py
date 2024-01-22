@@ -82,11 +82,16 @@ PETSc.Sys.Print("entry nodes: ", entry_nodes)
 
 PETSc.Sys.Print("compute input flow")
 
-with mpi_timer.region("compute input flow"), mpi_mem.region("compute input flow"):
-    input_flows = len(entry_nodes) * [1.0] if graph is not None else None
+with mpi_timer.region("compute boundary flows"), mpi_mem.region("compute boundary flows"):
+    if graph is not None:
+        entry_speed = 35000  # speed um/s
+        radii_at_entry_nodes = graph.diameters[entry_nodes] / 2
+        input_flows = entry_speed * np.pi * radii_at_entry_nodes**2 
+    else:
+        input_flows = None
     boundary_flow = bloodflow.boundary_flows_A_based(graph, entry_nodes, input_flows)
 
-PETSc.Sys.Print("end of input flow")
+PETSc.Sys.Print("end of input flow \n")
 
 PETSc.Sys.Print("compute static flow")
 
