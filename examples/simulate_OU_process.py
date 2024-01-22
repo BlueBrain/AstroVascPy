@@ -22,7 +22,6 @@ from astrovascpy.utils import create_entry_largest_nodes
 from astrovascpy.utils import create_input_speed
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
-from astrovascpy.vtk_io import vtk_writer
 
 petsc4py.init(sys.argv)
 
@@ -142,6 +141,8 @@ if graph is not None:
         print("end of sonata reporting", flush=True)
 
     if save_vtk:
+        from astrovascpy.vtk_io import vtk_writer
+        
         vtk_path = Path(params["output_folder"]) / "vtk_files"
         if not vtk_path.exists():
             Path.mkdir(vtk_path)
