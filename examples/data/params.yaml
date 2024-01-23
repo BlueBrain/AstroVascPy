@@ -27,3 +27,8 @@ t_2_max_capill: 2.7  # time (in seconds) to reach r_max from 0
 max_r_artery: 1.23   # max radius change factor
 mean_r_artery: 1.11  # mean radius change factor
 t_2_max_artery: 3.3  # time (in seconds) to reach r_max from 0
+
+# PETSc Linear solver
+solver: 'lgmres'
+max_it: 1000
+r_tol: 1.0e-12

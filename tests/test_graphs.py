@@ -2,7 +2,7 @@ import logging
 
 import numpy.testing as npt
 import pandas as pd
-from vascpy import PointVasculature
+import pytest
 
 from astrovascpy import bloodflow as tested
 from astrovascpy.utils import Graph
@@ -10,7 +10,23 @@ from astrovascpy.utils import Graph
 L = logging.getLogger(__name__)
 
 
-def test_simple_graph():
+@pytest.fixture
+def params():
+    return {
+        "blood_viscosity": 0.1,
+        "p_base": 1.33e-3,
+        "max_nb_inputs": 3,
+        "depth_ratio": 0.05,
+        "vasc_axis": 1,
+        "threshold_r": 3,
+        "max_r_capill": 1.38,
+        "t_2_max_capill": 2.7,
+        "max_r_artery": 1.23,
+        "t_2_max_artery": 3.3,
+    }
+
+
+def test_simple_graph(params):
     point_properties = pd.DataFrame(
         {
             "x": [0, 0, 0, 0, 0],
@@ -34,10 +50,7 @@ def test_simple_graph():
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
-    blood_viscosity = 0.1
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     normal_flow = graph.edge_properties["flow"].copy()
     normal_pressure = graph.node_properties["pressure"].copy()
 
@@ -59,9 +72,7 @@ def test_simple_graph():
     )
 
     graph.edge_properties.loc[(0, 2), "radius"] *= 1.2
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     vasodilated_flow = graph.edge_properties["flow"]
     vasodilated_pressure = graph.node_properties["pressure"]
 
@@ -86,7 +97,7 @@ def test_simple_graph():
     assert (vasodilated_pressure - 1e-10 <= normal_pressure).all()
 
 
-def test_bifurcation():
+def test_bifurcation(params):
     point_properties = pd.DataFrame(
         {
             "x": [0, 0, 0, 0],
@@ -111,10 +122,7 @@ def test_bifurcation():
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
-    blood_viscosity = 0.1
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     normal_flow = graph.edge_properties["flow"].copy()
     normal_pressure = graph.node_properties["pressure"].copy()
     npt.assert_allclose(normal_flow.to_list(), [1.0, 0.609756, 0.390244], rtol=1e-6, atol=1e-6)
@@ -126,9 +134,7 @@ def test_bifurcation():
     )
 
     graph.edge_properties["radius"] *= 1.2
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     vasodilated_flow = graph.edge_properties["flow"]
     vasodilated_pressure = graph.node_properties["pressure"]
 
@@ -146,7 +152,7 @@ def test_bifurcation():
     ).all()  # added 1e-10 for numerical errors
 
 
-def test_loop():
+def test_loop(params):
     """This example is from F. Schmidt Phd thesis, figure 9.1A"""
     point_properties = pd.DataFrame(
         {
@@ -173,10 +179,7 @@ def test_loop():
     entry_nodes = [0]
     input_flow = [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
-    blood_viscosity = 0.1
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     normal_flow = graph.edge_properties["flow"].copy()
     normal_pressure = graph.node_properties["pressure"].copy()
     npt.assert_allclose(
@@ -211,9 +214,7 @@ def test_loop():
     )
 
     graph.edge_properties.loc[(1, 1), "radius"] *= 1.2
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=blood_viscosity, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     vasodilated_flow = graph.edge_properties["flow"]
     vasodilated_pressure = graph.node_properties["pressure"]
     npt.assert_allclose(

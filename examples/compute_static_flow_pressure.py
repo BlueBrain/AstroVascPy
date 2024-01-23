@@ -86,7 +86,7 @@ with mpi_timer.region("compute boundary flows"), mpi_mem.region("compute boundar
     if graph is not None:
         entry_speed = 35000  # speed um/s
         radii_at_entry_nodes = graph.diameters[entry_nodes] / 2
-        input_flows = entry_speed * np.pi * radii_at_entry_nodes**2 
+        input_flows = entry_speed * np.pi * radii_at_entry_nodes**2
     else:
         input_flows = None
     boundary_flow = bloodflow.boundary_flows_A_based(graph, entry_nodes, input_flows)
@@ -96,12 +96,7 @@ PETSc.Sys.Print("end of input flow \n")
 PETSc.Sys.Print("compute static flow")
 
 with mpi_timer.region("compute static flow"), mpi_mem.region("compute static flow"):
-    bloodflow.update_static_flow_pressure(
-        graph,
-        boundary_flow,
-        blood_viscosity=params["blood_viscosity"],
-        base_pressure=params["p_base"],
-    )
+    bloodflow.update_static_flow_pressure(graph, boundary_flow, params)
 
 PETSc.Sys.Print("end of static flow pressure")
 

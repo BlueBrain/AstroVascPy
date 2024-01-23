@@ -142,7 +142,7 @@ if graph is not None:
 
     if save_vtk:
         from astrovascpy.vtk_io import vtk_writer
-        
+
         vtk_path = Path(params["output_folder"]) / "vtk_files"
         if not vtk_path.exists():
             Path.mkdir(vtk_path)
