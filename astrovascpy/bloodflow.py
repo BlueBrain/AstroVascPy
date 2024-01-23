@@ -38,7 +38,6 @@ from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
 
-from .exceptions import BloodFlowError
 from .typing import VasculatureParams
 
 # PETSc is compiled with complex number support

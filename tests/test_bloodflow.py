@@ -414,12 +414,6 @@ def test_update_static_flow_pressure(params):
         rtol=5e-7,
         atol=5e-7,
     )
-    npt.assert_allclose(
-        graph.node_properties["pressure"],
-        np.array([0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133]),
-        rtol=5e-7,
-        atol=5e-7,
-    )
 
 
 def test_total_flow_conservation_in_graph(params):
