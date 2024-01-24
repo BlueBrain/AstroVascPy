@@ -16,3 +16,5 @@ class VasculatureParams(typing.TypedDict):
     max_nb_inputs: int
     depth_ratio: float
     vasc_axis: VasculatureAxis
+    blood_viscosity: float
+    p_base: float

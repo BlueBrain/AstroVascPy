@@ -38,6 +38,8 @@ from astrovascpy.utils import find_neighbors
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
 
+from .typing import VasculatureParams
+
 # PETSc is compiled with complex number support
 # -> many warnings from/to PETSc to/from NumPy/SciPy
 warnings.filterwarnings(action="ignore", category=np.ComplexWarning)
@@ -81,8 +83,7 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
 def update_static_flow_pressure(
     graph: Graph,
     input_flow: npt.NDArray[np.float64],
-    blood_viscosity: float,
-    base_pressure: float,
+    params: VasculatureParams,
     with_hematocrit: bool = True,
 ):
     """Compute the time-independent pressure and flow.
@@ -90,14 +91,23 @@ def update_static_flow_pressure(
     Args:
         graph (utils.Graph): graph containing point vasculature skeleton.
         input_flow(numpy.array): input flow for each graph node.
-        blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
-        base_pressure (float): minimum pressure in the output edges
+        params (dict): general parameters for vasculature.
         with_hematocrit (bool): consider hematrocrit for resistance model
 
     Concerns: This function is part of the public API. Any change of signature
     or functional behavior may be done thoroughly.
 
     """
+
+    if graph is not None:
+        if not isinstance(graph, Graph):
+            raise BloodFlowError("'graph' parameter must be an instance of Graph")
+        for param in VasculatureParams.__annotations__:
+            if param not in params:
+                raise BloodFlowError(f"Missing parameter '{param}'")
+        blood_viscosity = params["blood_viscosity"]
+        base_pressure = params["p_base"]
+
     if graph is not None:
         entry_flow = input_flow[input_flow > 0]
         exit_flow = input_flow[input_flow < 0]
@@ -124,7 +134,7 @@ def update_static_flow_pressure(
     else:
         laplacian_cc = None
 
-    solution = _solve_linear(laplacian_cc if graph else None, input_flow)
+    solution = _solve_linear(laplacian_cc if graph else None, input_flow, params)
 
     if graph is not None:
         pressure = np.zeros(shape=graph.n_nodes)
@@ -551,9 +561,6 @@ def simulate_ou_process(
         - np.ndarray: (nb_iteration, n_edges) radius values at each time-step for each edge.
     """
 
-    BLOOD_VISCOSITY = params["blood_viscosity"]
-    P_BASE = params["p_base"]
-
     nb_iteration = round(simulation_time / time_step)
     # nb_iteration_noise = number of time_steps before relaxation starts:
     nb_iteration_noise = round(relaxation_start / time_step)
@@ -601,7 +608,7 @@ def simulate_ou_process(
         # Compute nodes of degree 1 where blood flows out
         boundary_flow = boundary_flows_A_based(graph, entry_nodes, input_flows)
 
-        update_static_flow_pressure(graph, boundary_flow, BLOOD_VISCOSITY, P_BASE)
+        update_static_flow_pressure(graph, boundary_flow, params)
 
         if graph is not None:
             flows[time_it] = graph.edge_properties["flow"]
@@ -632,12 +639,13 @@ def construct_static_incidence_matrix(graph):
     return sparse.csc_matrix((data, (row, col)), shape=(graph.n_edges, graph.n_nodes))
 
 
-def _solve_linear(laplacian, input_flow):
+def _solve_linear(laplacian, input_flow, params=None):
     """Solve sparse linear problem on the largest connected component only.
 
     Args:
         laplacian (scipy.sparse.csc_matrix): laplacian matrix associated to the graph.
         input_flow(scipy.sparse.lil_matrix): input flow for each graph node.
+        params (dict): general parameters for vasculature.
 
     Returns:
         scipy.sparse.csc_matrix: frequency dependent laplacian matrix
@@ -653,6 +661,13 @@ def _solve_linear(laplacian, input_flow):
         variable BACKEND_SOLVER_BFS to 'scipy' or 'petsc'.\
     """
     )
+
+    if params is None:
+        params = {}
+
+    SOLVER = params.get("solver", "lgmres")  # second argument is default
+    MAX_IT = params.get("max_it", 1e3)
+    R_TOL = params.get("r_tol", 1e-12)
 
     if MPI_RANK == 0:
         if sparse.issparse(input_flow):
@@ -715,7 +730,7 @@ def _solve_linear(laplacian, input_flow):
 
     opts = PETSc.Options()
     # solver
-    opts["ksp_type"] = "lgmres"
+    opts["ksp_type"] = SOLVER
     opts["ksp_gmres_restart"] = 100
     # preconditioner
     opts["pc_type"] = "gamg"
@@ -728,9 +743,9 @@ def _solve_linear(laplacian, input_flow):
 
     petsc_solver = PETSc.KSP().create(PETSc.COMM_WORLD)
     petsc_solver.setOperators(laplacian_petsc)
-    petsc_solver.rtol = 1e-12
+    petsc_solver.rtol = R_TOL
     # petsc_solver.atol = 1e-9
-    petsc_solver.max_it = 1e3
+    petsc_solver.max_it = MAX_IT
     petsc_solver.setFromOptions()
 
     PETSc.Sys.Print("-> PETSc Solver [bloodflow.py] : Start")

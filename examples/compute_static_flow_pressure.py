@@ -34,7 +34,6 @@ from astrovascpy.report_writer import write_simulation_report
 from astrovascpy.utils import create_entry_largest_nodes
 from astrovascpy.utils import mpi_mem
 from astrovascpy.utils import mpi_timer
-from astrovascpy.vtk_io import vtk_writer
 
 petsc4py.init(sys.argv)
 
@@ -83,21 +82,21 @@ PETSc.Sys.Print("entry nodes: ", entry_nodes)
 
 PETSc.Sys.Print("compute input flow")
 
-with mpi_timer.region("compute input flow"), mpi_mem.region("compute input flow"):
-    input_flows = len(entry_nodes) * [1.0] if graph is not None else None
+with mpi_timer.region("compute boundary flows"), mpi_mem.region("compute boundary flows"):
+    if graph is not None:
+        entry_speed = 35000  # speed um/s
+        radii_at_entry_nodes = graph.diameters[entry_nodes] / 2
+        input_flows = entry_speed * np.pi * radii_at_entry_nodes**2
+    else:
+        input_flows = None
     boundary_flow = bloodflow.boundary_flows_A_based(graph, entry_nodes, input_flows)
 
-PETSc.Sys.Print("end of input flow")
+PETSc.Sys.Print("end of input flow \n")
 
 PETSc.Sys.Print("compute static flow")
 
 with mpi_timer.region("compute static flow"), mpi_mem.region("compute static flow"):
-    bloodflow.update_static_flow_pressure(
-        graph,
-        boundary_flow,
-        blood_viscosity=params["blood_viscosity"],
-        base_pressure=params["p_base"],
-    )
+    bloodflow.update_static_flow_pressure(graph, boundary_flow, params)
 
 PETSc.Sys.Print("end of static flow pressure")
 
@@ -264,6 +263,8 @@ if graph is not None:
         print("end of sonata reporting")
 
     if save_vtk:
+        from astrovascpy.vtk_io import vtk_writer
+
         vtk_path = Path(params["output_folder"]) / "vtk_files"
         if not vtk_path.exists():
             Path.mkdir(vtk_path)

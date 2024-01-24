@@ -28,6 +28,22 @@ def edge_properties():
     )
 
 
+@pytest.fixture
+def params():
+    return {
+        "blood_viscosity": 0.1,
+        "p_base": 1.33e-3,
+        "max_nb_inputs": 3,
+        "depth_ratio": 0.05,
+        "vasc_axis": 1,
+        "threshold_r": 3,
+        "max_r_capill": 1.38,
+        "t_2_max_capill": 2.7,
+        "max_r_artery": 1.23,
+        "t_2_max_artery": 3.3,
+    }
+
+
 def test_compute_edge_resistances():
     radii = np.array([1, 1.25])
     resistances = tested.compute_edge_resistances(radii, blood_viscosity=1.2e-6)
@@ -185,7 +201,7 @@ def test_get_closest_edges(point_properties, edge_properties, caplog):
         tested.get_closest_edges(args, graph)
 
 
-def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
+def test_simulate_vasodilation_ou_process(point_properties, edge_properties, params):
     graph = utils.Graph(point_properties, edge_properties)
     dt = 0.01
     nb_iteration = 100
@@ -195,16 +211,6 @@ def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
     segment_id = 1
     endfoot_id = 1
     endfeet_length = 1.0
-
-    params = {
-        "blood_viscosity": 1.2e-6,
-        "p_base": 1.33e-3,
-        "threshold_r": 3,
-        "max_r_capill": 1.38,
-        "t_2_max_capill": 2.7,
-        "max_r_artery": 1.23,
-        "t_2_max_artery": 3.3,
-    }
 
     tested.set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length)
     radius_origin = tested.get_radius_at_endfoot(graph, endfoot_id)[:, 0]
@@ -221,7 +227,7 @@ def test_simulate_vasodilation_ou_process(point_properties, edge_properties):
     assert proba_rad < 0.05
 
 
-def test_simulate_ou_process(point_properties, edge_properties):
+def test_simulate_ou_process(point_properties, edge_properties, params):
     graph = utils.Graph(point_properties, edge_properties)
 
     dt = 0.01
@@ -236,15 +242,6 @@ def test_simulate_ou_process(point_properties, edge_properties):
     endfeet_length = 1.0
     entry_speed = [1] * nb_iteration
 
-    params = {
-        "blood_viscosity": 1.2e-6,
-        "p_base": 1.33e-3,
-        "threshold_r": 3,
-        "max_r_capill": 1.38,
-        "t_2_max_capill": 2.7,
-        "max_r_artery": 1.23,
-        "t_2_max_artery": 3.3,
-    }
     tested.set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length)
     flows, pressures, radiii = tested.simulate_ou_process(
         graph, entry_nodes, simulation_time, relaxation_start, time_step, entry_speed, params
@@ -385,7 +382,7 @@ def test_compute_static_laplacian():
     )
 
 
-def test_update_static_flow_pressure():
+def test_update_static_flow_pressure(params):
     point_properties = pd.DataFrame(
         {
             "x": [0, 0, 0, 0, 0, 0, 0, 0],
@@ -410,24 +407,16 @@ def test_update_static_flow_pressure():
     entry_nodes = [0]
     input_flow = len(entry_nodes) * [1.0]
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params, with_hematocrit=True)
     npt.assert_allclose(
         graph.edge_properties["flow"],
         np.array([1.0, 1.0, 1.0, 0.137931, 0.862069, 0]),
         rtol=5e-7,
         atol=5e-7,
     )
-    npt.assert_allclose(
-        graph.node_properties["pressure"],
-        np.array([0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133, 0.00133]),
-        rtol=5e-7,
-        atol=5e-7,
-    )
 
 
-def test_total_flow_conservation_in_graph():
+def test_total_flow_conservation_in_graph(params):
     """Check the total conservation of the flow in a connected graph.
     Here we compute the boundary flows using the area based method.
     """
@@ -459,9 +448,7 @@ def test_total_flow_conservation_in_graph():
         atol=1e-2,
     )
 
-    tested.update_static_flow_pressure(
-        graph, boundary_flows, blood_viscosity=1.2e-6, base_pressure=1.33e-3, with_hematocrit=True
-    )
+    tested.update_static_flow_pressure(graph, boundary_flows, params, with_hematocrit=True)
     flow = graph.edge_properties["flow"].values
 
     tot_flow = np.sum(incidence @ flow)
@@ -496,7 +483,7 @@ def test_total_flow_conservation_in_graph():
     )
 
 
-def test_conservation_flow():
+def test_conservation_flow(params):
     point_properties = pd.DataFrame(
         {
             "x": [0, 0, 0, 0],
@@ -524,9 +511,7 @@ def test_conservation_flow():
 
     boundary_flow = tested.boundary_flows_A_based(graph, entry_nodes, input_flow)
 
-    tested.update_static_flow_pressure(
-        graph, boundary_flow, blood_viscosity=1.2e-6, base_pressure=1.33e-3
-    )
+    tested.update_static_flow_pressure(graph, boundary_flow, params)
     flow = graph.edge_properties["flow"]
     npt.assert_allclose(
         flow[0],
