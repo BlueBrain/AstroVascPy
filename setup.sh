@@ -21,7 +21,7 @@ else
             echo "2. conda remove -y --name bfs_env --all"
             echo
         else
-            conda create -y --name bfs_env python=`python3 --version | awk '{print $2}'`
+            conda create -y --name bfs_env python=3.11.6
             conda activate bfs_env
             conda install -y pip
 
