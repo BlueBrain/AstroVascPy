@@ -1,0 +1,17 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: AstroVascPy
+message: '"If you use this software, please cite it as below."'
+type: software
+authors:
+  - given-names: >-
+      Stéphanie Battini, Nicola Cantarutti, Christos
+      Kotsalos and Tristan Carel
+    affiliation: Blue Brain Project (EPFL)
+repository-code: 'https://github.com/BlueBrain/AstroVascPy'
+# identifiers:
+#   - type: url
+#     value: 'http://tobeaddedonbioarxiv'
+date-released: 2023-06-26
