@@ -1,6 +1,5 @@
 include:
 - project: molsys/ci
-  ref: bloodflow/py311
   file: /ci/pipelines/molsys.bloodflow.yml
 - project: hpc/gitlab-pipelines
   file: github-project-pipelines.gitlab-ci.yml
