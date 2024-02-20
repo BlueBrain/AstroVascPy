@@ -11,7 +11,4 @@ authors:
       Kotsalos and Tristan Carel
     affiliation: Blue Brain Project (EPFL)
 repository-code: 'https://github.com/BlueBrain/AstroVascPy'
-# identifiers:
-#   - type: url
-#     value: 'http://tobeaddedonbioarxiv'
 date-released: 2023-06-26
