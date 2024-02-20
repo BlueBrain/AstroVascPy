@@ -65,7 +65,7 @@ setup(
     },
     license="Apache-2",
     packages=find_namespace_packages(include=["astrovascpy*"]),
-    python_requires=">=3.7",
+    python_requires=">=3.10",
     version=VERSION,
     install_requires=reqs,
     extras_require={
