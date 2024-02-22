@@ -80,7 +80,7 @@ setup(
     },
     include_package_data=True,
     classifiers=[
-        "Development Status :: Production/Stable",
+        "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Education",
         "Intended Audience :: Science/Research",
         "Programming Language :: Python :: 3",
