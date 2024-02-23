@@ -6,6 +6,83 @@ include:
 - project: hpc/gitlab-upload-logs
   file: enable-upload.yml
 
+
+build-wheels:
+  stage: build
+  # see  https://github.com/pypa/manylinux
+  image: quay.io/pypa/manylinux2014_x86_64
+  variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+    # system packages to install before building the wheels
+    # Example: SYS_PACKAGES: cmake wget
+    SYS_PACKAGES: ""
+    # command to run before building the wheels. Because the command is a string, multiple commands
+    # must be separated by semicolons e.g. do_sth; do_sth_else;
+    # Example: PRE_BUILD_COMMAND: ls; pwd;
+    PRE_BUILD_COMMAND: ""
+    # Note true and false must be in quotes because gitlab does not accept booleans
+    TEST_RUN_TOX: "false"
+
+    TXT_RED: "\e[31m"
+    TXT_CYAN: "\e[36m"
+    TXT_CLEAR: "\e[0m"
+
+  parallel:
+    matrix:
+      - PY_VERSION: [py310]
+
+  script:
+
+    # associative array to map py versions with python binary names
+    - declare -A PY_MAP=(
+        [py38]=cp38-cp38
+        [py39]=cp39-cp39
+        [py310]=cp310-cp310
+        [py311]=cp311-cp311
+        [py312]=cp312-cp312
+        )
+
+    # print a variable
+    - print_var() { echo -e "${TXT_CYAN}${1}=${!1}${TXT_CLEAR}"; }
+
+    # set a variable and echo its assignment
+    - set_and_print() { eval $1=$2; print_var $1; }
+
+    - cd "${PYTHON_PROJECT_DIR}"
+
+    - set_and_print PY_BIN_NAME "${PY_MAP[$PY_VERSION]}"
+    - set_and_print PY_BIN "/opt/python/${PY_BIN_NAME}/bin"
+
+    # Install system packages if any
+    - print_var SYS_PACKAGES
+    - if [[ -n $SYS_PACKAGES ]]; then yum install -y $SYS_PACKAGES; fi
+
+    # Run custom command if any
+    - print_var PRE_BUILD_COMMAND
+    - if [[ -n $PRE_BUILD_COMMAND ]]; then eval "$PRE_BUILD_COMMAND"; fi
+
+    # Upgrade pip, setuptools and wheel
+    - ${PY_BIN}/pip install --upgrade --no-cache-dir pip setuptools wheel
+
+    # directory to store the wheel
+    - set_and_print WHEELS_DIR "${PYTHON_PROJECT_DIR}/wheelhouse"
+    - rm -rf $WHEELS_DIR && mkdir -p $WHEELS_DIR
+
+    # Build the wheels
+    - ${PY_BIN}/pip wheel . -w $WHEELS_DIR --no-deps
+
+    # skip testing if disabled
+    - if [[ "$TEST_RUN_TOX" != "true" ]]; then { echo -e "${TXT_CYAN}Skipping tests.${TXT_CLEAR}"; exit 0; } fi
+
+    # run tox testenv installing the wheel instead of creating a dist
+    - ${PY_BIN}/pip install tox
+    - ${PY_BIN}/tox --installpkg=$REPAIRED_WHEEL -e $PY_VERSION
+
+  when: always
+  artifacts:
+    paths:
+      - ${PYTHON_PROJECT_DIR}/wheelhouse/
+
 publish-package:
   needs: [build-wheels]
   stage: publish
