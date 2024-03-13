@@ -33,6 +33,7 @@ or
   >>> io.writeBinaryFile('file.dat', [vec,])
 See also PetscBinaryIO.__doc__ and methods therein.
 """
+
 import functools
 import importlib.metadata
 import os
@@ -385,7 +386,7 @@ class PetscBinaryIO(object):
     def writeMatSparse(self, fh, mat):
         """Writes a Mat into a PETSc binary file handle"""
 
-        ((M, N), (I, J, V)) = mat
+        ((M, N), (I, J, V)) = mat  # noqa: E741
         metadata = np.array([MatSparse._classid, M, N, I[-1]], dtype=self._inttype)
         rownz = I[1:] - I[:-1]
 
@@ -427,7 +428,7 @@ class PetscBinaryIO(object):
 
     @decorate_with_conf
     def readMatSciPy(self, fh):
-        (M, N), (I, J, V) = self.readMatSparse(fh)
+        (M, N), (I, J, V) = self.readMatSparse(fh)  # noqa: E741
         return csr_matrix((V, J, I), shape=(M, N))
 
     @decorate_with_conf

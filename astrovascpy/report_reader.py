@@ -15,14 +15,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import numpy as np
 import pandas as pd
 from cached_property import cached_property
 from libsonata import ElementReportReader
 from libsonata import SonataError
 
-from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.utils import ensure_list
+from .exceptions import BloodFlowError
+from .utils import ensure_list
 
 # pylint: disable=missing-kwoa
 
