@@ -4,7 +4,7 @@ will use snap and will be in archngv most probably.
 Also this is a bit over-engineered but makes things easier if we have different types of reports
 in the future. Plus, this is a light version of the snap classes which will make things easy to
 adapt from these classes to the snap ones.
-Copyright (c) 2023-2023 Blue Brain Project/EPFL
+Copyright (c) 2023-2024 Blue Brain Project/EPFL
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
