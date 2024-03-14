@@ -21,6 +21,7 @@ reqs = [
     "h5py",
     "networkx",
     "morphio",
+    "mpi4py",
     "vascpy",
     "matplotlib",
     "seaborn",
