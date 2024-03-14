@@ -77,7 +77,7 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
                     "depth_ratio": 10,
                     "vasc_axis": 1,
                     "blood_viscosity": 0.1,
-                    "p_base": 1.33e-3,
+                    "base_pressure": 1.33e-3,
                 },
             )
             == np.array([2])
@@ -93,7 +93,7 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
                     "depth_ratio": -1,
                     "vasc_axis": 1,
                     "blood_viscosity": 0.1,
-                    "p_base": 1.33e-3,
+                    "base_pressure": 1.33e-3,
                 },
             )
             == np.array([2])

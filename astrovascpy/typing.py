@@ -28,4 +28,4 @@ class VasculatureParams(typing.TypedDict):
     depth_ratio: float
     vasc_axis: VasculatureAxis
     blood_viscosity: float
-    p_base: float
+    base_pressure: float

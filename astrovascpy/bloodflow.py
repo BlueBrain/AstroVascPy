@@ -106,7 +106,7 @@ def update_static_flow_pressure(
             if param not in params:
                 raise BloodFlowError(f"Missing parameter '{param}'")
         blood_viscosity = params["blood_viscosity"]
-        base_pressure = params["p_base"]
+        base_pressure = params["base_pressure"]
 
     if graph is not None:
         entry_flow = input_flow[input_flow > 0]
