@@ -14,7 +14,7 @@ L = logging.getLogger(__name__)
 def params():
     return {
         "blood_viscosity": 0.1,
-        "p_base": 1.33e-3,
+        "base_pressure": 1.33e-3,
         "max_nb_inputs": 3,
         "depth_ratio": 0.05,
         "vasc_axis": 1,

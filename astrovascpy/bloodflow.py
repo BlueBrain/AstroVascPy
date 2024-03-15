@@ -1,5 +1,5 @@
 """
-Copyright (c) 2023-2023 Blue Brain Project/EPFL
+Copyright (c) 2023-2024 Blue Brain Project/EPFL
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -10,6 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import gc
 import logging
 import os
@@ -20,25 +21,27 @@ from functools import partial
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from mpi4py import MPI as mpi
 from petsc4py import PETSc
 from scipy import sparse
 from scipy.sparse import linalg
 from scipy.stats import randint
 from tqdm import tqdm
 
-from astrovascpy import ou
-from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.scipy_petsc_conversions import PETScVec2array
-from astrovascpy.scipy_petsc_conversions import array2PETScVec
-from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
-from astrovascpy.scipy_petsc_conversions import distribute_array
-from astrovascpy.utils import Graph
-from astrovascpy.utils import find_neighbors
-from astrovascpy.utils import mpi_mem
-from astrovascpy.utils import mpi_timer
-
+from . import ou
+from .exceptions import BloodFlowError
+from .scipy_petsc_conversions import PETScVec2array
+from .scipy_petsc_conversions import array2PETScVec
+from .scipy_petsc_conversions import coomatrix2PETScMat
+from .scipy_petsc_conversions import distribute_array
 from .typing import VasculatureParams
+from .utils import Graph
+from .utils import comm
+from .utils import find_neighbors
+from .utils import mpi_mem
+from .utils import mpi_timer
+from .utils import rank
+from .utils import rank0
+from .utils import size
 
 # PETSc is compiled with complex number support
 # -> many warnings from/to PETSc to/from NumPy/SciPy
@@ -46,9 +49,6 @@ warnings.filterwarnings(action="ignore", category=np.ComplexWarning)
 
 print = partial(print, flush=True)
 
-MPI_COMM = mpi.COMM_WORLD
-MPI_RANK = MPI_COMM.Get_rank()
-MPI_SIZE = MPI_COMM.Get_size()
 
 # pylint: disable=protected-access
 
@@ -106,7 +106,7 @@ def update_static_flow_pressure(
             if param not in params:
                 raise BloodFlowError(f"Missing parameter '{param}'")
         blood_viscosity = params["blood_viscosity"]
-        base_pressure = params["p_base"]
+        base_pressure = params["base_pressure"]
 
     if graph is not None:
         entry_flow = input_flow[input_flow > 0]
@@ -126,7 +126,7 @@ def update_static_flow_pressure(
         else None
     )
 
-    if MPI_RANK == 0:
+    if rank0():
         cc_mask = graph.cc_mask
         degrees = graph.degrees
         laplacian_cc = laplacian.tocsc()[cc_mask, :][:, cc_mask]
@@ -473,12 +473,12 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
             kappa_a = None
         print("kappa for arteries: ", kappa_a)
 
-    kappa_c = MPI_COMM.bcast(kappa_c, root=0)
-    sigma_c = MPI_COMM.bcast(sigma_c, root=0)
+    kappa_c = comm().bcast(kappa_c, root=0)
+    sigma_c = comm().bcast(sigma_c, root=0)
     if kappa_c is not None:
         sqrt_kappa_c = np.sqrt(2 * kappa_c)
-    kappa_a = MPI_COMM.bcast(kappa_a, root=0)
-    sigma_a = MPI_COMM.bcast(sigma_a, root=0)
+    kappa_a = comm().bcast(kappa_a, root=0)
+    sigma_a = comm().bcast(sigma_a, root=0)
     if kappa_a is not None:
         sqrt_kappa_a = np.sqrt(2 * kappa_a)
 
@@ -487,8 +487,8 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         endfeet_id = graph.edge_properties.loc[:, "endfeet_id"].to_numpy()
 
     # Distribute vectors across MPI ranks
-    radius_origin = distribute_array(radius_origin if MPI_RANK == 0 else None)
-    endfeet_id = distribute_array(endfeet_id if MPI_RANK == 0 else None)
+    radius_origin = distribute_array(radius_origin if rank0() else None)
+    endfeet_id = distribute_array(endfeet_id if rank0() else None)
 
     seed = 1
     for radius_origin_, endfeet_id_ in zip(radius_origin, endfeet_id):
@@ -512,29 +512,29 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
 
     radii_at_endfeet = np.array(radii_at_endfeet)
     # rae : radii at endfeet
-    rae_rows = MPI_COMM.gather(radii_at_endfeet.shape[0], root=0)
+    rae_rows = comm().gather(radii_at_endfeet.shape[0], root=0)
 
     # if there are zero radii affected by endfeet, return None
     zero_radii = False
-    if MPI_RANK == 0:
+    if rank0():
         if np.sum(rae_rows) == 0:
             zero_radii = True
-    zero_radii = MPI_COMM.bcast(zero_radii, root=0)
+    zero_radii = comm().bcast(zero_radii, root=0)
     if zero_radii:
         return None
 
     rae = np.empty(1)
-    if MPI_RANK == 0:
+    if rank0():
         rae = np.empty((np.sum(rae_rows), radii_at_endfeet.shape[1]), dtype=np.float64)
         rae[: rae_rows[0]] = radii_at_endfeet
 
-    for iproc in range(1, MPI_SIZE):
-        if MPI_RANK == 0:
+    for iproc in range(1, size()):
+        if rank0():
             i0 = np.sum(rae_rows[:iproc])
             i1 = i0 + rae_rows[iproc]
-            MPI_COMM.Recv(rae[i0:i1], source=iproc)
-        elif MPI_RANK == iproc:
-            MPI_COMM.Send(radii_at_endfeet, dest=0)
+            comm().Recv(rae[i0:i1], source=iproc)
+        elif rank() == iproc:
+            comm().Send(radii_at_endfeet, dest=0)
 
     return rae
 
@@ -565,15 +565,16 @@ def simulate_ou_process(
     # nb_iteration_noise = number of time_steps before relaxation starts:
     nb_iteration_noise = round(relaxation_start / time_step)
 
-    # Only MPI_RANK == 0 enters here
+    # Only rank0() enters here
     if graph is not None:
         # create this df to assign radii fast at each iteration
         end_df = graph.edge_properties[["endfeet_id"]]
         end_df = end_df[end_df.endfeet_id != -1]
 
     PETSc.Sys.Print("-> simulate_vasodilation_ou_process")
-    with mpi_timer.region("simulate_vasodilation_ou_process"), mpi_mem.region(
-        "simulate_vasodilation_ou_process"
+    with (
+        mpi_timer.region("simulate_vasodilation_ou_process"),
+        mpi_mem.region("simulate_vasodilation_ou_process"),
     ):
         radii = simulate_vasodilation_ou_process(
             graph, time_step, nb_iteration, nb_iteration_noise, params
@@ -585,7 +586,7 @@ def simulate_ou_process(
         radiii = np.zeros((nb_iteration, graph.n_edges))
 
     time_iterations = range(nb_iteration)
-    if MPI_RANK == 0:
+    if rank0():
         time_iterations = tqdm(range(nb_iteration))
 
     # Compute the edge ids corresponding to input nodes
@@ -669,7 +670,7 @@ def _solve_linear(laplacian, input_flow, params=None):
     MAX_IT = params.get("max_it", 1e3)
     R_TOL = params.get("r_tol", 1e-12)
 
-    if MPI_RANK == 0:
+    if rank0():
         if sparse.issparse(input_flow):
             input_flow = input_flow.toarray()
 
@@ -680,13 +681,14 @@ def _solve_linear(laplacian, input_flow, params=None):
 
     # in os.getenv() the second argument refers to the default value
     if os.getenv("BACKEND_SOLVER_BFS", "scipy") == "scipy":
-        if MPI_RANK == 0 and n_nodes > 2e6:
+        if rank0() and n_nodes > 2e6:
             L.warning(WARNING_MSG, {"n_nodes": n_nodes})
 
-        with mpi_timer.region("Scipy Solver [bloodflow.py]"), mpi_mem.region(
-            "Scipy Solver [bloodflow.py]"
+        with (
+            mpi_timer.region("Scipy Solver [bloodflow.py]"),
+            mpi_mem.region("Scipy Solver [bloodflow.py]"),
         ):
-            if MPI_RANK == 0:
+            if rank0():
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error")
                     try:
@@ -705,26 +707,27 @@ def _solve_linear(laplacian, input_flow, params=None):
                         result = linalg.spsolve(laplacian, input_flow)
 
     if os.getenv("BACKEND_SOLVER_BFS", "scipy") == "scipy":
-        if bool(int(os.getenv("DEBUG_BFS", "0"))) and (MPI_RANK == 0):
+        if bool(int(os.getenv("DEBUG_BFS", "0"))) and (rank0()):
             scipy_res_norm = np.linalg.norm(input_flow - laplacian * result)
             PETSc.Sys.Print(f"-> SciPy residual norm = {scipy_res_norm}")
         return result
 
     # PETSc-related part!
-    if MPI_RANK == 0 and n_nodes < 2e6:
+    if rank0() and n_nodes < 2e6:
         L.warning(WARNING_MSG, {"n_nodes": n_nodes})
 
     # These containers are distributed across MPI tasks, contrary to the SciPy ones!
-    with mpi_timer.region("PETSc containers [bloodflow.py]"), mpi_mem.region(
-        "PETSc containers [bloodflow.py]"
+    with (
+        mpi_timer.region("PETSc containers [bloodflow.py]"),
+        mpi_mem.region("PETSc containers [bloodflow.py]"),
     ):
-        laplacian_petsc = coomatrix2PETScMat(laplacian if MPI_RANK == 0 else [])
-        input_flow_petsc = array2PETScVec(input_flow if MPI_RANK == 0 else [])
-        result_petsc = array2PETScVec(result if MPI_RANK == 0 else [])
+        laplacian_petsc = coomatrix2PETScMat(laplacian if rank0() else [])
+        input_flow_petsc = array2PETScVec(input_flow if rank0() else [])
+        result_petsc = array2PETScVec(result if rank0() else [])
 
         # create the nullspace of the laplacian
-        one_vec = np.ones(shape=len(input_flow)) if MPI_RANK == 0 else None
-        null_vec = array2PETScVec(one_vec if MPI_RANK == 0 else [])
+        one_vec = np.ones(shape=len(input_flow)) if rank0() else None
+        null_vec = array2PETScVec(one_vec if rank0() else [])
         null_space = PETSc.NullSpace().create(null_vec)
         laplacian_petsc.setNullSpace(null_space)
 
@@ -749,24 +752,25 @@ def _solve_linear(laplacian, input_flow, params=None):
     petsc_solver.setFromOptions()
 
     PETSc.Sys.Print("-> PETSc Solver [bloodflow.py] : Start")
-    with mpi_timer.region("PETSc Solver [bloodflow.py]"), mpi_mem.region(
-        "PETSc Solver [bloodflow.py]"
+    with (
+        mpi_timer.region("PETSc Solver [bloodflow.py]"),
+        mpi_mem.region("PETSc Solver [bloodflow.py]"),
     ):
         petsc_solver.solve(input_flow_petsc, result_petsc)
     PETSc.Sys.Print("-> PETSc Solver [bloodflow.py] : End")
 
     # convert to numpy array [only in process 0]
     result_petsc_sp = PETScVec2array(result_petsc)
-    if MPI_RANK == 0:
+    if rank0():
         if laplacian.dtype != PETSc.ScalarType:
             result_petsc_sp = result_petsc_sp.astype(laplacian.dtype)
 
     petsc_res_norm = None
-    if MPI_RANK == 0:
+    if rank0():
         if petsc_solver.getIterationNumber() == petsc_solver.max_it:
             L.warning(f"Reached maximum number of iteration {petsc_solver.max_it}.")
 
-    if bool(int(os.getenv("DEBUG_BFS", "0"))) and MPI_RANK == 0:
+    if bool(int(os.getenv("DEBUG_BFS", "0"))) and rank0():
         petsc_res_norm = np.linalg.norm(input_flow - laplacian * result_petsc_sp)  # l2 norm
         input_flow_norm = np.linalg.norm(input_flow)
         PETSc.Sys.Print("Laplacian matrix size: ", np.shape(laplacian))
@@ -780,7 +784,7 @@ def _solve_linear(laplacian, input_flow, params=None):
             f"-> The KSP preconditioned residual norm is: {petsc_solver.getResidualNorm()}"
         )
 
-    if MPI_RANK == 0:
+    if rank0():
         result = result_petsc_sp
 
     # Clean-up
@@ -788,8 +792,9 @@ def _solve_linear(laplacian, input_flow, params=None):
     # after multiple steps the program crashes with an out-of-memory error!
     # The malloc_trim technique that we use in Neurodamus does not work with PETSc,
     # since it leads to SEG FAULT.
-    with mpi_timer.region("PETSc Mem Clean-Up [bloodflow.py]"), mpi_mem.region(
-        "PETSc Mem Clean-Up [bloodflow.py]"
+    with (
+        mpi_timer.region("PETSc Mem Clean-Up [bloodflow.py]"),
+        mpi_mem.region("PETSc Mem Clean-Up [bloodflow.py]"),
     ):
         petsc_solver.destroy()
         laplacian_petsc.destroy()
