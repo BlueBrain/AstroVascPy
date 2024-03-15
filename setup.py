@@ -1,9 +1,9 @@
 """Setup for the astrovascpy package."""
+
 import importlib.util
 from pathlib import Path
 
-from setuptools import find_namespace_packages
-from setuptools import setup
+from setuptools import find_namespace_packages, setup
 
 spec = importlib.util.spec_from_file_location(
     "astrovascpy.version",

@@ -19,8 +19,7 @@ limitations under the License.
 import numpy as np
 import pandas as pd
 from cached_property import cached_property
-from libsonata import ElementReportReader
-from libsonata import SonataError
+from libsonata import ElementReportReader, SonataError
 
 from .exceptions import BloodFlowError
 from .utils import ensure_list

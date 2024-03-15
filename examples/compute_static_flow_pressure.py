@@ -12,10 +12,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import sys
 from functools import partial
-from pathlib import Path
-from pathlib import PurePath
+from pathlib import Path, PurePath
 
 import matplotlib.colors as c
 import matplotlib.pyplot as plt
@@ -31,9 +31,7 @@ from astrovascpy.io import load_graph_from_bin
 # from astrovascpy.io import load_graph_from_csv
 # from astrovascpy.io import load_graph_from_h5
 from astrovascpy.report_writer import write_simulation_report
-from astrovascpy.utils import create_entry_largest_nodes
-from astrovascpy.utils import mpi_mem
-from astrovascpy.utils import mpi_timer
+from astrovascpy.utils import create_entry_largest_nodes, mpi_mem, mpi_timer
 
 petsc4py.init(sys.argv)
 

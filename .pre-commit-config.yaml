@@ -17,27 +17,23 @@ repos:
           stages:
             - commit-msg
           additional_dependencies: ['conventional-changelog-conventionalcommits']
-  - repo: https://github.com/pycqa/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-  - repo: https://github.com/psf/black
-    rev: 22.6.0
-    hooks:
-      - id: black
   - repo: https://github.com/codespell-project/codespell
     rev: v2.1.0
     hooks:
       - id: codespell
         args: ["-x", ".codespellignorelines"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.3.2
+    hooks:
+      # Run the linter.
+      - id: ruff
+      # Run the formatter.
+      - id: ruff-format
+
   #- repo: https://github.com/PyCQA/pydocstyle
   #  rev: 6.1.1
   #  hooks:
   #    - id: pydocstyle
   #      additional_dependencies: ["toml"]
   #      exclude: 'examples|tests|scripts'
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
-    hooks:
-      - id: flake8
-        exclude: 'examples|tests|scripts'
