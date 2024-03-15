@@ -1,0 +1,20 @@
+name: Static code analysis
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+jobs:
+  lint:
+    name: Perform static analysis of the code
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Install test dependencies
+      run: |
+        python3 -m pip install --upgrade pip setuptools
+        python3 -m pip install tox-gh-actions
+    - name: Run tox
+      run: |
+        tox -e lint
