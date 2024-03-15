@@ -15,18 +15,13 @@ import os
 import random
 import string
 
-from numpy import concatenate
-from numpy import dtype
+from numpy import concatenate, dtype
 from numpy import zeros as np_zeros
 from petsc4py import PETSc
 from scipy.sparse import csr_matrix
 
 from . import PetscBinaryIO
-from .utils import comm
-from .utils import mpi
-from .utils import rank
-from .utils import rank0
-from .utils import size
+from .utils import comm, mpi, rank, rank0, size
 
 
 def _from_numpy_dtype(np_type):

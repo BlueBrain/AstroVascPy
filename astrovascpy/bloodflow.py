@@ -29,19 +29,14 @@ from tqdm import tqdm
 
 from . import ou
 from .exceptions import BloodFlowError
-from .scipy_petsc_conversions import PETScVec2array
-from .scipy_petsc_conversions import array2PETScVec
-from .scipy_petsc_conversions import coomatrix2PETScMat
-from .scipy_petsc_conversions import distribute_array
+from .scipy_petsc_conversions import (
+    PETScVec2array,
+    array2PETScVec,
+    coomatrix2PETScMat,
+    distribute_array,
+)
 from .typing import VasculatureParams
-from .utils import Graph
-from .utils import comm
-from .utils import find_neighbors
-from .utils import mpi_mem
-from .utils import mpi_timer
-from .utils import rank
-from .utils import rank0
-from .utils import size
+from .utils import Graph, comm, find_neighbors, mpi_mem, mpi_timer, rank, rank0, size
 
 # PETSc is compiled with complex number support
 # -> many warnings from/to PETSc to/from NumPy/SciPy
@@ -298,9 +293,9 @@ def set_radius_at_endfoot(graph, endfoot_id, endfoot_radius):
     # if (np.asarray(endfoot_radius) <= 0).any():
     #    raise BloodFlowError("Please provide endfoot_radius > 0.")
 
-    graph.edge_properties.loc[
-        graph.edge_properties.endfeet_id == endfoot_id, ["radius"]
-    ] = endfoot_radius
+    graph.edge_properties.loc[graph.edge_properties.endfeet_id == endfoot_id, ["radius"]] = (
+        endfoot_radius
+    )
 
 
 def set_endfoot_id(graph, endfoot_id, section_id, segment_id, endfeet_length):  # pragma: no cover

@@ -16,12 +16,10 @@ import pickle
 from pathlib import Path
 
 import pandas as pd
-from vascpy import PointVasculature
-from vascpy import SectionVasculature
+from vascpy import PointVasculature, SectionVasculature
 
 from .exceptions import BloodFlowError
-from .utils import Graph
-from .utils import rank0
+from .utils import Graph, rank0
 
 
 def load_graph(filename):

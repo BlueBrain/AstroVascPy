@@ -11,17 +11,13 @@ import yaml
 from mpi4py import MPI
 from petsc4py import PETSc
 
-from astrovascpy.bloodflow import generate_endfeet
-from astrovascpy.bloodflow import simulate_ou_process
+from astrovascpy.bloodflow import generate_endfeet, simulate_ou_process
 
 # from astrovascpy.io import load_graph_from_bin
 # from astrovascpy.io import load_graph_from_h5
 from astrovascpy.io import load_graph_from_csv
 from astrovascpy.report_writer import write_simulation_report
-from astrovascpy.utils import create_entry_largest_nodes
-from astrovascpy.utils import create_input_speed
-from astrovascpy.utils import mpi_mem
-from astrovascpy.utils import mpi_timer
+from astrovascpy.utils import create_entry_largest_nodes, create_input_speed, mpi_mem, mpi_timer
 
 petsc4py.init(sys.argv)
 
