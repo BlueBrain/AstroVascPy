@@ -14,26 +14,26 @@ spec.loader.exec_module(module)
 VERSION = module.VERSION
 
 reqs = [
-    "click",
     "cached-property",
-    "scipy",
-    "numpy",
+    "click",
+    "coverage",
+    "cython",
     "h5py",
-    "networkx",
+    "libsonata",
+    "matplotlib",
     "morphio",
     "mpi4py",
-    "vascpy",
-    "matplotlib",
-    "seaborn",
-    "tqdm",
-    "pyyaml",
+    "networkx",
+    "numpy",
     "pandas<2.0.0",
-    "tables",
-    "coverage",
-    "libsonata",
-    "trimesh",
-    "cython",
     "psutil",
+    "pyyaml",
+    "scipy",
+    "seaborn",
+    "tables",
+    "tqdm",
+    "trimesh",
+    "vascpy",
 ]
 
 doc_reqs = [
@@ -54,12 +54,7 @@ setup(
     author="Blue Brain Project, EPFL",
     long_description=Path("README.md").read_text(encoding="utf-8"),
     long_description_content_type="text/markdown",
-    # url="https://bbpteam.epfl.ch/documentation/projects/astrovascpy",
     url="https://github.com/BlueBrain/AstroVascPy",
-    # project_urls={
-    #     "Tracker": "https://bbpteam.epfl.ch/project/issues/projects/MOLSYS/issues",
-    #     "Source": "https://bbpgitlab.epfl.ch/molsys/astrovascpy",
-    # },
     project_urls={
         "Tracker": "https://github.com/BlueBrain/AstroVascpy/issues",
         "Source": "https://github.com/BlueBrain/AstroVascPy",
