@@ -1,0 +1,25 @@
+version: 2
+build:
+  os: ubuntu-22.04
+  apt_packages:
+  - libopenmpi-dev
+  - libpetsc-real3.15-dev
+  tools:
+    python: "3.11"
+python:
+  install:
+  # petsc4py doesn't explicitly declare its dependencies
+  # they need to be installed beforehand
+  - requirements: docs/requirements-petsc4py.txt
+  # astrovascpy doesn't explicitly declare its dependence on petsc4py
+  # it needs to be installed beforehand
+  - requirements: docs/requirements.txt
+  - method: pip
+    path: .
+    extra_requirements:
+    - docs
+    - viz
+sphinx:
+  builder: html
+  configuration: docs/source/conf.py
+  fail_on_warning: false

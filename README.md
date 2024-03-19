@@ -1,4 +1,4 @@
-![AstroVascPy Logo](docs/source/logo/BPP-AstroVascPy-Github.jpg)
+![AstroVascPy Logo](docs/source/logo/BBP-AstroVascPy-Github.jpg)
 # AstroVascPy
 
 AstroVascPy is a Python library for computing the blood pressure and flow through the vasculature
