@@ -17,7 +17,7 @@ from pkg_resources import get_distribution
 project = "AstroVascPy"
 
 # The short X.Y version
-version = get_distribution("AstroVascPy").version
+version = get_distribution(project).version
 
 # The full version, including alpha/beta/rc tags
 release = version
