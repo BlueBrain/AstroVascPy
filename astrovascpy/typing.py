@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 import enum
-import typing
+from typing import TypedDict, NotRequired
 
 
 class VasculatureAxis(enum.IntEnum):
@@ -23,9 +23,21 @@ class VasculatureAxis(enum.IntEnum):
     Z = 2
 
 
-class VasculatureParams(typing.TypedDict):
+class VasculatureParams(TypedDict):
     max_nb_inputs: int
     depth_ratio: float
     vasc_axis: VasculatureAxis
     blood_viscosity: float
     base_pressure: float
+
+    c_cap: NotRequired[float]
+    c_art: NotRequired[float]
+    threshold_r: NotRequired[float]
+    max_r_capill: NotRequired[float]
+    t_2_max_capill: NotRequired[float]
+    max_r_artery: NotRequired[float]
+    t_2_max_artery: NotRequired[float]
+
+    solver: NotRequired[str]
+    max_it: NotRequired[int]
+    r_tol: NotRequired[float]

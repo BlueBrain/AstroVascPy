@@ -97,7 +97,7 @@ def update_static_flow_pressure(
     if graph is not None:
         if not isinstance(graph, Graph):
             raise BloodFlowError("'graph' parameter must be an instance of Graph")
-        for param in VasculatureParams.__annotations__:
+        for param in VasculatureParams.__required_keys__:
             if param not in params:
                 raise BloodFlowError(f"Missing parameter '{param}'")
         blood_viscosity = params["blood_viscosity"]
@@ -436,13 +436,13 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
     radii_at_endfeet = []  # matrix: rows = number of radii, columns = time points
 
     # constant c for capillaries and arteries
-    c_cap = 2.8
-    c_art = 2.8
-
-    # Uncomment the following if we want to fit the mean value.
-    # Remark:  it is not possible to fit mean value and max value at same time
-    # c_cap = np.sqrt(2/np.pi) * (params["max_r_capill"] - 1) / (params["mean_r_capill"] - 1)
-    # c_art = np.sqrt(2/np.pi) * (params["max_r_artery"] - 1) / (params["mean_r_artery"] - 1)
+    C_CAP = params.get("c_cap", 2.8)
+    C_ART = params.get("c_art", 2.8)
+    THRESHOLD_R = params.get("threshold_r", 3)
+    MAX_R_CAPILL = params.get("max_r_capill", 1.38)
+    T_2_MAX_CAPILL = params.get("t_2_max_capill", 2.7)
+    MAX_R_ARTERY = params.get("max_r_artery", 1.23)
+    T_2_MAX_ARTERY = params.get("t_2_max_artery", 3.3)
 
     kappa_c, sigma_c = None, None
     kappa_a, sigma_a = None, None
@@ -453,17 +453,17 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         # calibrate kappa for capillaries
         # We calibrate only for the first radius.
         try:
-            r0_c = ge[ge <= params["threshold_r"]].iloc[0]
-            x_max_c = r0_c * (params["max_r_capill"] - 1)
-            kappa_c, sigma_c = ou.compute_OU_params(params["t_2_max_capill"], x_max_c, c_cap)
+            r0_c = ge[ge <= THRESHOLD_R].iloc[0]
+            x_max_c = r0_c * (MAX_R_CAPILL - 1)
+            kappa_c, sigma_c = ou.compute_OU_params(T_2_MAX_CAPILL, x_max_c, C_CAP)
         except IndexError:
             kappa_c = None
         print("kappa for capillaries: ", kappa_c)
         # calibrate kappa for arteries
         try:
-            r0_a = ge[ge > params["threshold_r"]].iloc[0]
-            x_max_a = r0_a * (params["max_r_artery"] - 1)
-            kappa_a, sigma_a = ou.compute_OU_params(params["t_2_max_artery"], x_max_a, c_art)
+            r0_a = ge[ge > THRESHOLD_R].iloc[0]
+            x_max_a = r0_a * (MAX_R_ARTERY - 1)
+            kappa_a, sigma_a = ou.compute_OU_params(T_2_MAX_ARTERY, x_max_a, C_ART)
         except IndexError:
             kappa_a = None
         print("kappa for arteries: ", kappa_a)
@@ -490,14 +490,14 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         if endfeet_id_ == -1:
             continue
 
-        if radius_origin_ <= params["threshold_r"]:
-            x_max = radius_origin_ * (params["max_r_capill"] - 1)
+        if radius_origin_ <= THRESHOLD_R:
+            x_max = radius_origin_ * (MAX_R_CAPILL - 1)
             kappa = kappa_c
-            sigma = x_max * sqrt_kappa_c / c_cap
+            sigma = x_max * sqrt_kappa_c / C_CAP
         else:
-            x_max = radius_origin_ * (params["max_r_artery"] - 1)
+            x_max = radius_origin_ * (MAX_R_ARTERY - 1)
             kappa = kappa_a
-            sigma = x_max * sqrt_kappa_a / c_art
+            sigma = x_max * sqrt_kappa_a / C_ART
 
         radii_process = radius_origin_ + ou.ornstein_uhlenbeck_process(
             kappa, sigma, dt, nb_iteration, nb_iteration_noise, seed

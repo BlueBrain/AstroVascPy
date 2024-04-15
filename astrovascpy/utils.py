@@ -336,7 +336,7 @@ def create_entry_largest_nodes(graph: Graph, params: VasculatureParams):
     if graph is not None:
         if not isinstance(graph, Graph):
             raise BloodFlowError("'graph' parameter must be an instance of Graph")
-        for param in VasculatureParams.__annotations__:
+        for param in VasculatureParams.__required_keys__:
             if param not in params:
                 raise BloodFlowError(f"Missing parameter '{param}'")
         n_nodes = params["max_nb_inputs"]
