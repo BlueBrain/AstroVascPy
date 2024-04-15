@@ -24,6 +24,32 @@ class VasculatureAxis(enum.IntEnum):
 
 
 class VasculatureParams(TypedDict):
+    """ 
+    Parameters used in the model:
+
+    vasc_axis: vasculature axis corresponding to x, y, or z. Should be set to 0, 1, or 2.
+    depth_ratio: depth along the vasc_axis. This is the portion of the vasculature where there are inputs.
+    max_nb_inputs: maximum number of entry nodes where we inject the flow into the vasculature. Should be >= 1.
+    blood_viscosity: plasma viscosity in g.µm^-1.s^-1
+    base_pressure: reference pressure in g * um^{-1} * s^{-2}. At resting state equal to the external pressure
+
+    threshold_r: radius (µm) threshold. A radius smaller than the threshold is considered a capillary. 
+    A radius bigger than the threshold is considered an artery.
+
+    c_cap: constant used in the ROU parameter calibration for capillaries
+    c_art: constant used in the ROU parameter calibration for arteries
+
+    max_r_capill: max radius change factor for capillaries
+    t_2_max_capill: time (in seconds) to reach r_max from 0 for capillaries
+    max_r_artery: max radius change factor for arteries
+    t_2_max_artery: time (in seconds) to reach r_max from 0 for arteries
+
+    PETSc Linear solver parameters:
+    solver: iterative linear solver used by PETSc 
+    max_it: maximum number of solver iterations
+    r_tol: relative tollerance
+    """
+
     max_nb_inputs: int
     depth_ratio: float
     vasc_axis: VasculatureAxis
