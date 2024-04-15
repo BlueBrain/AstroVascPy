@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 import enum
-from typing import TypedDict, NotRequired
+from typing import NotRequired, TypedDict
 
 
 class VasculatureAxis(enum.IntEnum):
