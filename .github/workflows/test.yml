@@ -30,8 +30,9 @@ jobs:
       run: |
         python -m pip install --upgrade pip setuptools
         python -m pip install tox-gh-actions
-        python -c "import importlib.metadata as im; print(im.distribution('petsc4py').files[0].locate())"
         echo $PETSC_DIR
+        python -c "import importlib.metadata as im; print(im.distribution('petsc').files[0].locate())"
+        python -c "import importlib.metadata as im; print(im.distribution('petsc4py').files[0].locate())"
     - name: Run tox
       run: tox
       env:
