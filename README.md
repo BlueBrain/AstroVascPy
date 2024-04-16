@@ -1,4 +1,4 @@
-<img src="https://github.com/BlueBrain/AstroVascPy/blob/main/docs/source/logo/BBP-AstroVascPy-Github.jpg?raw=true" alt="AstroVascPy Logo"/>
+![AstroVascPy Logo](docs/source/logo/BBP-AstroVascPy-Github.jpg)
 
 # AstroVascPy
 
