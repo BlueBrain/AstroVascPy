@@ -322,7 +322,7 @@ def create_entry_largest_nodes(graph: Graph, params: VasculatureParams):
 
     Args:
         graph (Graph): graph containing point vasculature skeleton.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
 
     Returns:
         numpy.array: (1,) Ids of the largest nodes.

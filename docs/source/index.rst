@@ -3,8 +3,11 @@
 .. mdinclude:: ../../README.md
    :start-line: 2
 
+Contents
+------------
+
 .. toctree::
    :maxdepth: 2
 
    Home <self>
-   installation
+   api_ref

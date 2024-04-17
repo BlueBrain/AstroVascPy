@@ -86,7 +86,7 @@ def update_static_flow_pressure(
     Args:
         graph (utils.Graph): graph containing point vasculature skeleton.
         input_flow(numpy.array): input flow for each graph node.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
         with_hematocrit (bool): consider hematrocrit for resistance model
 
     Concerns: This function is part of the public API. Any change of signature
@@ -426,7 +426,7 @@ def simulate_vasodilation_ou_process(graph, dt, nb_iteration, nb_iteration_noise
         dt (float): time-step.
         nb_iteration (int): number of iteration.
         nb_iteration_noise (int): number of time steps with non-zero noise.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
 
 
     Returns:
@@ -541,13 +541,12 @@ def simulate_ou_process(
 
     Args:
         graph (utils.Graph): graph containing point vasculature skeleton.
-        params (dict): general parameters for vasculature.
         entry_nodes (numpy.array:): (nb_entry_nodes,) ids of entry_nodes.
         simulation_time (float): total time of the simulation, in seconds.
         relaxation_start (float): time at which the noise is set to zero.
         time_step (float): size of the time-step.
         entry_speed (numpy.array); speed vector on the entry nodes.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
 
     Returns:
         tuple of 3 elements:
@@ -641,7 +640,7 @@ def _solve_linear(laplacian, input_flow, params=None):
     Args:
         laplacian (scipy.sparse.csc_matrix): laplacian matrix associated to the graph.
         input_flow(scipy.sparse.lil_matrix): input flow for each graph node.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
 
     Returns:
         scipy.sparse.csc_matrix: frequency dependent laplacian matrix
