@@ -3,16 +3,11 @@ build:
   os: ubuntu-22.04
   apt_packages:
   - libopenmpi-dev
-  - libpetsc-real3.15-dev
   tools:
     python: "3.11"
 python:
   install:
-  # petsc4py doesn't explicitly declare its dependencies
-  # they need to be installed beforehand
-  - requirements: docs/requirements-petsc4py.txt
-  # astrovascpy doesn't explicitly declare its dependence on petsc4py
-  # it needs to be installed beforehand
+  # Markdown conversion requires a particular version of docutils
   - requirements: docs/requirements.txt
   - method: pip
     path: .

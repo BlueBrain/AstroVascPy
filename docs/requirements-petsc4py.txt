@@ -1,2 +1,0 @@
-cython<3
-numpy
