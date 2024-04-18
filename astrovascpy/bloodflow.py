@@ -152,8 +152,7 @@ def compute_edge_resistances(radii, blood_viscosity, with_hematocrit=True):
 
     Args:
         radii (numpy.array): (nb_edges, ) radii of each edge (units: µm).
-        blood_viscosity (float): 1.2e-6, standard value of the plasma viscosity :math:`g\, \mu m^{-1}\, s^{-1}`.
-        Should be between 0 and 1.
+        blood_viscosity (float): 1.2e-6, standard value of the plasma viscosity :math:`g\, \mu m^{-1}\, s^{-1}`. Should be between 0 and 1.
         with_hematocrit (bool): consider hematrocrit for resistance model
 
     Returns:
@@ -319,10 +318,7 @@ def get_closest_edges(args, graph):
     Explore the graph starting from an edge until endfeet_length is depleted.
 
     Args:
-        args (tuple): (3,) with
-        args[0] being segment_id (int) i.e. id of the corresponding segment,
-        args[1], section_id (int) i.e. id of the corresponding section and
-        args[2], endfeet_length (float) i.e. is the corresponding endfoot length in µm.
+        args (tuple): (3,) with args[0] being segment_id (int) i.e. id of the corresponding segment, args[1] section_id (int) i.e. id of the corresponding section and args[2], endfeet_length (float) i.e. is the corresponding endfoot length in µm.
         graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
