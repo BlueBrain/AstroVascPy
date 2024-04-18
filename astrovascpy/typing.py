@@ -37,7 +37,7 @@ class VasculatureParams(TypedDict):
     (Optional) Stochastic simulation parameters:
 
     Args:
-    
+
         threshold_r: radius (µm) threshold. A radius smaller than the threshold is considered a capillary. A radius bigger than the threshold is considered an artery.
 
         c_cap: constant used in the ROU parameter calibration for capillaries
