@@ -7,26 +7,60 @@ on:
 env:
   apt_options: -o Acquire::Retries=3
   PETSC_DIR: /usr/lib/petscdir/petsc3.15/x86_64-linux-gnu-real
+  PETSC_VERSION: "3.15.1"
+  PYTHON_VERSION: "3.11"
 jobs:
   test:
     name: Build and test the contribution
     runs-on: ubuntu-latest
     steps:
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
     - name: Setup MPI
       uses: mpi4py/setup-mpi@v1
       with:
         mpi: openmpi
+
     - name: Checkout repository
-      uses: actions/checkout@v3
-    - name: Install system packages
+      uses: actions/checkout@v4
+
+    - name: Install system packages for MPI and PETSc
       run: |
-        sudo apt-get ${{env.apt_options}} update -y
-        sudo apt-get ${{env.apt_options}} install python3-petsc4py python3-mpi4py libopenmpi-dev libpetsc-real3.15-dev
-    - name: Install test dependencies
+        sudo apt-get ${{ env.apt_options }} update -y
+        sudo apt-get ${{ env.apt_options }} install libopenmpi-dev libpetsc-real3.15-dev
+    - name: Install petsc4py and other test dependencies
       run: |
         python -m pip install --upgrade pip setuptools
         python -m pip install tox-gh-actions
-    - name: Run tox
-      run: tox
+
+    - name: Cache petsc4py build
+      id: cache-petsc4py
+      uses: actions/cache@v3
       env:
-        PYTHONPATH: ${{env.PETSC_DIR}}/lib/python3/dist-packages
+        cache-name: cache-petsc4py
+      with:
+        path: venv
+        key: ${{ runner.os }}-build-${{ env.cache-name}}-${{ env.PETSC_VERSION }}-py${{ env.PYTHON_VERSION }}
+
+    # FIXME Once PETSc is updated to a more reasonable version, one should attempt to
+    # build a wheel instead of installing into a virtual environment.  This wheel can then
+    # be referred to directly in Tox, and we can avoid passing PYTHONPATH around.
+    - name: Build petsc4py
+      if: steps.cache-petsc4py.outputs.cache-hit != 'true'
+      run: |
+        python -m venv venv
+        . ./venv/bin/activate
+        python -m pip install --upgrade pip setuptools wheel
+        python -m pip install "cython<3" numpy
+        git clone --branch "v${{ env.PETSC_VERSION }}" --depth 1 https://gitlab.com/petsc/petsc.git
+        cd petsc/src/binding/petsc4py
+        python -m pip install .
+
+    - name: Run tox
+      run: |
+        tox -e py${{ env.PYTHON_VERSION }}
+      env:
+        PYTHONPATH: ${{ github.workspace }}/venv/lib/python${{ env.PYTHON_VERSION }}/site-packages
