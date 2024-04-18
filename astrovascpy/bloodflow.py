@@ -56,8 +56,8 @@ def compute_static_laplacian(graph, blood_viscosity, with_hematocrit=True):
 
     Args:
         graph (utils.Graph): graph containing point vasculature skeleton.
-        blood_viscosity (float): plasma viscosity in g.µm^-1.s^-1
-        with_hematocrit (bool): consider hematrocrit for resistance model
+        blood_viscosity (float): plasma viscosity in :math:`g\, \mu m^{-1}\, s^{-1}`.
+        with_hematocrit (bool): consider hematrocrit for resistance model.
 
     Returns:
         scipy.sparse.csc_matrix: laplacian matrix
@@ -152,8 +152,8 @@ def compute_edge_resistances(radii, blood_viscosity, with_hematocrit=True):
 
     Args:
         radii (numpy.array): (nb_edges, ) radii of each edge (units: µm).
-        blood_viscosity (float): 1.2e-6, standard value of the plasma viscosity (g.µm^-1.s^-1).
-        Should be between [0,1].
+        blood_viscosity (float): 1.2e-6, standard value of the plasma viscosity :math:`g\, \mu m^{-1}\, s^{-1}`.
+        Should be between 0 and 1.
         with_hematocrit (bool): consider hematrocrit for resistance model
 
     Returns:
@@ -270,8 +270,7 @@ def set_radii_at_endfeet(graph, endfeet_radii):
 
     Args:
         graph (utils.Graph): raph containing point vasculature skeleton.
-        endfeet_radii (DataFrame): (endfeet_id, radius) pandas dataframe with endfeet_id and
-        the corresponding radius.
+        endfeet_radii (DataFrame): (endfeet_id, radius) pandas dataframe with endfeet_id and the corresponding radius.
     """
     graph.edge_properties.loc[endfeet_radii.index, "radius"] = endfeet_radii.radius
 
@@ -285,8 +284,7 @@ def set_radius_at_endfoot(graph, endfoot_id, endfoot_radius):
         endfoot_radius (float or numpy.array): corresponding radius.
 
     Raises:
-        BloodFlowError: if endfoot_id does not correspond to a real endfoot id in the graph and
-        if endfoot_radius < 0.
+        BloodFlowError: if endfoot_id does not correspond to a real endfoot id in the graph and if endfoot_radius < 0.
     """
     # if endfoot_id not in list(graph.edge_properties.endfeet_id.values):
     #    raise BloodFlowError("The endfoot_id must correspond to a real endfoot id in the graph.")
@@ -322,9 +320,9 @@ def get_closest_edges(args, graph):
 
     Args:
         args (tuple): (3,) with
-        args[0] being segment_id (int): id of the corresponding segment,
-        args[1], section_id (int): id of the corresponding section and
-        args[2], endfeet_length (float): is the corresponding endfoot length in µm.
+        args[0] being segment_id (int) i.e. id of the corresponding segment,
+        args[1], section_id (int) i.e. id of the corresponding section and
+        args[2], endfeet_length (float) i.e. is the corresponding endfoot length in µm.
         graph (utils.Graph): graph containing point vasculature skeleton.
 
     Returns:
@@ -541,7 +539,7 @@ def simulate_ou_process(
 
     Args:
         graph (utils.Graph): graph containing point vasculature skeleton.
-        entry_nodes (numpy.array:): (nb_entry_nodes,) ids of entry_nodes.
+        entry_nodes (numpy.array): (nb_entry_nodes,) ids of entry_nodes.
         simulation_time (float): total time of the simulation, in seconds.
         relaxation_start (float): time at which the noise is set to zero.
         time_step (float): size of the time-step.
