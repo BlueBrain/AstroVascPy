@@ -16,7 +16,7 @@
 ### v0.1.2
 =======
 * Introduce the class `utils.Graph` to optimize the computation of node degrees. (#12)
-* Compute flow and pressure only on the main connected component. (#12)   
+* Compute flow and pressure only on the main connected component. (#12)
 
 ### v0.1.1
 =======
