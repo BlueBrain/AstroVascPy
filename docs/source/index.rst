@@ -3,11 +3,12 @@
 .. mdinclude:: ../../README.md
    :start-line: 2
 
-Contents
+Contents:
 ------------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    Home <self>
    api_ref
+   changelog
