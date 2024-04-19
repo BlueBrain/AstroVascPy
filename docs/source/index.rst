@@ -3,7 +3,7 @@
 .. mdinclude:: ../../README.md
    :start-line: 2
 
-Contents
+Contents:
 ------------
 
 .. toctree::
@@ -11,3 +11,4 @@ Contents
 
    Home <self>
    api_ref
+   changelog
