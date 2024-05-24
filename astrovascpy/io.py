@@ -54,7 +54,7 @@ def load_graph_from_bin(filename):
         if os.path.exists(filename):
             print("Loading graph from binary file using pickle", flush=True)
             filehandler = open(filename, "rb")
-            pv = pickle.load(filehandler)
+            pv = pd.read_pickle(filehandler)
             graph = Graph.from_point_vasculature(pv)
         else:
             raise BloodFlowError("Graph file not found")

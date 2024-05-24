@@ -25,7 +25,7 @@ reqs = [
     "mpi4py",
     "networkx",
     "numpy",
-    "pandas<2.0.0",
+    "pandas",
     "psutil",
     "pyyaml",
     "scipy",
