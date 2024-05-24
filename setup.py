@@ -69,11 +69,6 @@ setup(
         "test": test_reqs,
         "viz": ["vtk"],
     },
-    entry_points={
-        "console_scripts": [
-            "astrovascpy=astrovascpy.cli:main",
-        ],
-    },
     include_package_data=True,
     classifiers=[
         "Development Status :: 5 - Production/Stable",
