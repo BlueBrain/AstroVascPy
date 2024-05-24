@@ -424,7 +424,7 @@ def test_total_flow_conservation_in_graph(params):
     TEST_DIR = Path(__file__).resolve().parent.parent
     graph_path_cc = TEST_DIR / "examples/data/graphs_folder/toy_graph.bin"
     filehandler = open(graph_path_cc, "rb")
-    pv = pickle.load(filehandler)
+    pv = pd.read_pickle(filehandler)
     graph = utils.Graph.from_point_vasculature(pv)
 
     entry_nodes = [123, 144, 499]
