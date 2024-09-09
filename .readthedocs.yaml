@@ -1,0 +1,20 @@
+version: 2
+build:
+  os: ubuntu-22.04
+  apt_packages:
+  - libopenmpi-dev
+  tools:
+    python: "3.11"
+python:
+  install:
+  # Markdown conversion requires a particular version of docutils
+  - requirements: docs/requirements.txt
+  - method: pip
+    path: .
+    extra_requirements:
+    - docs
+    - viz
+sphinx:
+  builder: html
+  configuration: docs/source/conf.py
+  fail_on_warning: false

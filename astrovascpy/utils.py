@@ -1,15 +1,15 @@
-"""
-Copyright (c) 2023-2023 Blue Brain Project/EPFL
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright (c) 2023-2024 Blue Brain Project/EPFL
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import functools
 import logging
 import sys
 import time
@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 import psutil
 import vascpy
-from mpi4py import MPI
 from scipy.signal import find_peaks_cwt
 from scipy.sparse.csgraph import connected_components
 
@@ -41,7 +40,52 @@ console_handler.setFormatter(FORMATTER)
 L = logging.getLogger(__name__)
 L.addHandler(console_handler)
 
-MPI_RANK = MPI.COMM_WORLD.Get_rank()
+
+@functools.cache
+def mpi():
+    """
+    Returns:
+        The `mpi4py.MPI` module
+    """
+    from mpi4py import MPI
+
+    return MPI
+
+
+@functools.cache
+def comm():
+    """
+    Returns:
+        The MPI communicator (mpi4py.MPI.Comm)
+    """
+    return mpi().COMM_WORLD
+
+
+@functools.cache
+def rank():
+    """
+    Returns:
+        MPI rank of the current process (int)
+    """
+    return comm().Get_rank()
+
+
+@functools.cache
+def rank0():
+    """
+    Returns:
+        True if the current process has MPI rank 0, False otherwise
+    """
+    return rank() == 0
+
+
+@functools.cache
+def size():
+    """
+    Returns:
+        The size of the MPI communicator (int)
+    """
+    return comm().Get_size()
 
 
 class Graph(vascpy.PointVasculature):
@@ -276,7 +320,7 @@ def create_entry_largest_nodes(graph: Graph, params: VasculatureParams):
 
     Args:
         graph (Graph): graph containing point vasculature skeleton.
-        params (dict): general parameters for vasculature.
+        params (typing.VasculatureParams): general parameters for vasculature.
 
     Returns:
         numpy.array: (1,) Ids of the largest nodes.
@@ -290,7 +334,7 @@ def create_entry_largest_nodes(graph: Graph, params: VasculatureParams):
     if graph is not None:
         if not isinstance(graph, Graph):
             raise BloodFlowError("'graph' parameter must be an instance of Graph")
-        for param in VasculatureParams.__annotations__:
+        for param in VasculatureParams.__required_keys__:
             if param not in params:
                 raise BloodFlowError(f"Missing parameter '{param}'")
         n_nodes = params["max_nb_inputs"]
@@ -564,19 +608,15 @@ class mpi_timer:
 
     @staticmethod
     def print():
-        comm = MPI.COMM_WORLD
-        nRanks = comm.Get_size()
-        myRank = comm.Get_rank()
-
         # let everyone flush to get a clean output
         sys.stdout.flush()
-        comm.Barrier()
+        comm().Barrier()
 
         llbl = 0
         for reg in mpi_timer._timings:
             llbl = max(len(reg), llbl)
 
-        if myRank == 0:
+        if rank0():
             print("")
             print(80 * "-")
             print("Time report [sec]")
@@ -600,19 +640,19 @@ class mpi_timer:
             region[0] = mpi_timer._timings[reg][0]
             count = mpi_timer._timings[reg][1]
             region_max = np.zeros(1)
-            comm.Reduce(region, region_max, op=MPI.MAX, root=0)
+            comm().Reduce(region, region_max, op=mpi().MAX, root=0)
             region_min = np.zeros(1)
-            comm.Reduce(region, region_min, op=MPI.MIN, root=0)
+            comm().Reduce(region, region_min, op=mpi().MIN, root=0)
             region_ave = np.zeros(1)
-            comm.Reduce(region, region_ave, op=MPI.SUM, root=0)
-            region_ave /= nRanks
+            comm().Reduce(region, region_ave, op=mpi().SUM, root=0)
+            region_ave /= size()
 
-            if myRank == 0:
+            if rank0():
                 s = f'{reg}{(llbl-len(reg))*" "}{region_max[0]:17.3f}'
                 s += f"{region_min[0]:17.3f}{region_ave[0]:17.3f}{count:7d}"
                 print(s)
 
-        if myRank == 0:
+        if rank0():
             print(80 * "-")
             print("")
 
@@ -636,18 +676,15 @@ class mpi_mem:
 
     @staticmethod
     def print():
-        comm = MPI.COMM_WORLD
-        myRank = comm.Get_rank()
-
         # let everyone flush to get a clean output
         sys.stdout.flush()
-        comm.Barrier()
+        comm().Barrier()
 
         llbl = 0
         for reg in mpi_mem._mem:
             llbl = max(len(reg), llbl)
 
-        if myRank == 0:
+        if rank0():
             print("")
             print(80 * "-")
             print("Memory report [MB]")
@@ -670,18 +707,18 @@ class mpi_mem:
             region[0] = mpi_mem._mem[reg][0]
             count = mpi_mem._mem[reg][1]
             region_max = np.zeros(1)
-            comm.Reduce(region, region_max, op=MPI.MAX, root=0)
+            comm().Reduce(region, region_max, op=mpi().MAX, root=0)
             region_min = np.zeros(1)
-            comm.Reduce(region, region_min, op=MPI.MIN, root=0)
+            comm().Reduce(region, region_min, op=mpi().MIN, root=0)
             region_sum = np.zeros(1)
-            comm.Reduce(region, region_sum, op=MPI.SUM, root=0)
+            comm().Reduce(region, region_sum, op=mpi().SUM, root=0)
 
-            if myRank == 0:
+            if rank0:
                 s = f'{reg}{(llbl-len(reg))*" "}{region_max[0]:17.3f}'
                 s += f"{region_min[0]:17.3f}{region_sum[0]:17.3f}{count:7d}"
                 print(s)
 
-        if myRank == 0:
+        if rank0:
             print(80 * "-")
             print("")
 

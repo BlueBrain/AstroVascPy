@@ -5,11 +5,13 @@ import pytest
 from mpi4py import MPI
 from scipy.sparse import coo_matrix
 
-from astrovascpy.scipy_petsc_conversions import PETScMat2coo
-from astrovascpy.scipy_petsc_conversions import PETScVec2array
-from astrovascpy.scipy_petsc_conversions import array2PETScVec
-from astrovascpy.scipy_petsc_conversions import coomatrix2PETScMat
-from astrovascpy.scipy_petsc_conversions import distribute_array
+from astrovascpy.scipy_petsc_conversions import (
+    PETScMat2coo,
+    PETScVec2array,
+    array2PETScVec,
+    coomatrix2PETScMat,
+    distribute_array,
+)
 
 # pip install pytest-mpi
 # mpirun -n 4 pytest --with-mpi tests/test_mpi.py

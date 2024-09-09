@@ -21,9 +21,7 @@ else
             echo "2. conda remove -y --name bfs_env --all"
             echo
         else
-            # environment with python 3.10.8
-            # (the latest one tested in BBP's supercomputer at the time of AstroVascPy's release)
-            conda create -y --name bfs_env python=3.10.8
+            conda create -y --name bfs_env python=3.11.6
             conda activate bfs_env
             conda install -y pip
 

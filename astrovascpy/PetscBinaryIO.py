@@ -1,15 +1,15 @@
-"""
-Copyright (c) 2023-2023 Blue Brain Project/EPFL
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+# Copyright (c) 2023-2024 Blue Brain Project/EPFL
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+"""
 PetscBinaryIO
 ===============
 COPIED FROM PETSC Library -> $PETSC_DIR/lib/petsc/bin (along with get_conf function)
@@ -33,6 +33,7 @@ or
   >>> io.writeBinaryFile('file.dat', [vec,])
 See also PetscBinaryIO.__doc__ and methods therein.
 """
+
 import functools
 import importlib.metadata
 import os
@@ -385,7 +386,7 @@ class PetscBinaryIO(object):
     def writeMatSparse(self, fh, mat):
         """Writes a Mat into a PETSc binary file handle"""
 
-        ((M, N), (I, J, V)) = mat
+        ((M, N), (I, J, V)) = mat  # noqa: E741
         metadata = np.array([MatSparse._classid, M, N, I[-1]], dtype=self._inttype)
         rownz = I[1:] - I[:-1]
 
@@ -427,7 +428,7 @@ class PetscBinaryIO(object):
 
     @decorate_with_conf
     def readMatSciPy(self, fh):
-        (M, N), (I, J, V) = self.readMatSparse(fh)
+        (M, N), (I, J, V) = self.readMatSparse(fh)  # noqa: E741
         return csr_matrix((V, J, I), shape=(M, N))
 
     @decorate_with_conf

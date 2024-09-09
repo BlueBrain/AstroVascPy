@@ -15,5 +15,6 @@ This page presents the complete API documentation.
     astrovascpy.report_reader
     astrovascpy.report_writer
     astrovascpy.scipy_petsc_conversions
+    astrovascpy.typing
     astrovascpy.utils
     astrovascpy.vtk_io

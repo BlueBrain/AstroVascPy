@@ -9,7 +9,7 @@ vasc_axis: 1  # vasculature axis corresponding to x, y, or z. Should be set to 0
 depth_ratio: 0.05  # Depth along the vasc_axis. This is the portion of the vasculature where there are inputs.
 max_nb_inputs: 3 # maximum number of inputs to inject flow/pressure into vasculature. Should be >= 1.
 
-p_base: 1.33e-3  # reference pressure in g * um^{-1} * s^{-2}. At resting state equal to the external pressure
+base_pressure: 1.33e-3  # reference pressure in g * um^{-1} * s^{-2}. At resting state equal to the external pressure
 
 
 ### OU calibration parameters
@@ -18,12 +18,18 @@ threshold_r: 3  # Radius (in micro-meters) threshold.
 # A radius smaller than the threshold is considered a capillary.
 # A radius bigger than the threshold is considered an artery.
 
+c_cap: 2.8    # constant used in the ROU parameter calibration for capillaries
+c_art: 2.8    # constant used in the ROU parameter calibration for arteries
+
 # Capillaries
 max_r_capill: 1.38   # max radius change factor
-mean_r_capill: 1.09  # mean radius change factor
 t_2_max_capill: 2.7  # time (in seconds) to reach r_max from 0
 
 # Arteries
 max_r_artery: 1.23   # max radius change factor
-mean_r_artery: 1.11  # mean radius change factor
 t_2_max_artery: 3.3  # time (in seconds) to reach r_max from 0
+
+# PETSc Linear solver
+solver: 'lgmres'
+max_it: 1000
+r_tol: 1.0e-12

@@ -71,7 +71,14 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
     with caplog.at_level(logging.WARNING):
         assert (
             test_module.create_entry_largest_nodes(
-                graph, params={"max_nb_inputs": 1, "depth_ratio": 10, "vasc_axis": 1}
+                graph,
+                params={
+                    "max_nb_inputs": 1,
+                    "depth_ratio": 10,
+                    "vasc_axis": 1,
+                    "blood_viscosity": 0.1,
+                    "base_pressure": 1.33e-3,
+                },
             )
             == np.array([2])
         ).all()
@@ -80,7 +87,14 @@ def test_create_entry_largest_nodes(point_properties, edge_properties, caplog):
     with caplog.at_level(logging.WARNING):
         assert (
             test_module.create_entry_largest_nodes(
-                graph, params={"max_nb_inputs": 1, "depth_ratio": -1, "vasc_axis": 1}
+                graph,
+                params={
+                    "max_nb_inputs": 1,
+                    "depth_ratio": -1,
+                    "vasc_axis": 1,
+                    "blood_viscosity": 0.1,
+                    "base_pressure": 1.33e-3,
+                },
             )
             == np.array([2])
         ).all()

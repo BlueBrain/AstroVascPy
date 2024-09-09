@@ -1,4 +1,5 @@
-![AstroVascPy Logo](docs/source/logo/BPP-AstroVascPy-Github.jpg)
+![AstroVascPy Logo](docs/source/logo/BBP-AstroVascPy-Github.jpg)
+
 # AstroVascPy
 
 AstroVascPy is a Python library for computing the blood pressure and flow through the vasculature
@@ -58,7 +59,7 @@ Here are the units of these entities:
 
 ## Authors
 
-Stéphanie Battini, Nicola Cantarutti, Christos Kotsalos, Alexis Arnaudon
+Stéphanie Battini, Nicola Cantarutti, Christos Kotsalos and Tristan Carel
 
 Link to the article on Bio-arxiv:
 
@@ -68,7 +69,7 @@ The development of this software was supported by funding to the Blue Brain Proj
 École polytechnique fédérale de Lausanne (EPFL), from the Swiss government’s ETH Board of the Swiss Federal
 Institutes of Technology.
 
-We would like to thank Thomas Delemontex, Eleftherios Zisis, Alessandro Cattabiani and Tristan Carel
+We would like to thank Alessandro Cattabiani, Thomas Delemontex and Eleftherios Zisis
 for reviewing the code and the engineering support.
 
 Copyright (c) 2023-2023 Blue Brain Project/EPFL

@@ -3,10 +3,7 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 
-from astrovascpy.io import load_graph
-from astrovascpy.io import load_graph_from_bin
-from astrovascpy.io import load_graph_from_csv
-from astrovascpy.io import load_graph_from_h5
+from astrovascpy.io import load_graph, load_graph_from_bin, load_graph_from_csv, load_graph_from_h5
 from astrovascpy.PetscBinaryIO import get_conf
 
 TEST_DIR = Path(__file__).resolve().parent

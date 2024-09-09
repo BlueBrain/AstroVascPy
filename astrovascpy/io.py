@@ -1,29 +1,23 @@
-"""
-Copyright (c) 2023-2023 Blue Brain Project/EPFL
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-"""
+# Copyright (c) 2023-2024 Blue Brain Project/EPFL
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import os
 import pickle
 from pathlib import Path
 
 import pandas as pd
-from mpi4py import MPI as mpi
-from vascpy import PointVasculature
-from vascpy import SectionVasculature
+from vascpy import PointVasculature, SectionVasculature
 
-from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.utils import Graph
-
-MPI_COMM = mpi.COMM_WORLD
-MPI_RANK = MPI_COMM.Get_rank()
+from .exceptions import BloodFlowError
+from .utils import Graph, rank0
 
 
 def load_graph(filename):
@@ -56,11 +50,11 @@ def load_graph_from_bin(filename):
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """
-    if MPI_RANK == 0:
+    if rank0():
         if os.path.exists(filename):
             print("Loading graph from binary file using pickle", flush=True)
             filehandler = open(filename, "rb")
-            pv = pickle.load(filehandler)
+            pv = pd.read_pickle(filehandler)
             graph = Graph.from_point_vasculature(pv)
         else:
             raise BloodFlowError("Graph file not found")
@@ -77,7 +71,7 @@ def load_graph_from_h5(filename):
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """
-    if MPI_RANK == 0:
+    if rank0():
         if os.path.exists(filename):
             print("Loading sonata graph using PointVasculature.load_sonata", flush=True)
             pv = PointVasculature.load_sonata(filename)
@@ -100,7 +94,7 @@ def load_graph_from_csv(node_filename, edge_filename):
     Returns:
         utils.Graph: graph containing point vasculature skeleton.
     """
-    if MPI_RANK == 0:
+    if rank0():
         print("Loading csv dataset using pandas", flush=True)
         graph_nodes = pd.read_csv(node_filename)
         graph_edges = pd.read_csv(edge_filename)
