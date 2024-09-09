@@ -38,7 +38,7 @@ from .utils import Graph, comm, find_neighbors, mpi_mem, mpi_timer, rank, rank0,
 
 # PETSc is compiled with complex number support
 # -> many warnings from/to PETSc to/from NumPy/SciPy
-warnings.filterwarnings(action="ignore", category=np.ComplexWarning)
+warnings.filterwarnings(action="ignore", category=np.exceptions.ComplexWarning)
 
 print = partial(print, flush=True)
 
