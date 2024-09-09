@@ -1,19 +1,18 @@
 import multiprocessing
-from joblib import Parallel, delayed, parallel_config
 import pickle
 from functools import partial
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import psutil
 from archngv import NGVCircuit
+from joblib import Parallel, delayed, parallel_config
 from tqdm import tqdm
 
 from astrovascpy import bloodflow
 from astrovascpy.exceptions import BloodFlowError
 from astrovascpy.utils import Graph
-
-import psutil
 
 print = partial(print, flush=True)
 
@@ -97,16 +96,16 @@ if __name__ == "__main__":
     n_cores = psutil.cpu_count(logical=False)
     print(f"number of physical CPU cores = {n_cores}")
 
-    print(f"loading circuit : start")
+    print("loading circuit : start")
     # filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
     filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
     graph = load_graph_archngv_parallel(
         filename_ngv, n_workers=n_cores
     )  # n_astro=50 for debugging (smaller processing needs)
-    print(f"loading circuit : finish")
+    print("loading circuit : finish")
 
-    print(f"pickle graph : start")
+    print("pickle graph : start")
     graph_path = "./data/graphs_folder/dumped_graph.bin"
     filehandler = open(graph_path, "wb")
     pickle.dump(graph, filehandler)
-    print(f"pickle graph : finish")
+    print("pickle graph : finish")
