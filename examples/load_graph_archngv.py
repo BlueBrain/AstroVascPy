@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from astrovascpy import bloodflow
 from astrovascpy.exceptions import BloodFlowError
-from astrovascpy.utils import set_edge_data
+from astrovascpy.utils import Graph
 
 import psutil
 
@@ -35,11 +35,11 @@ def load_graph_archngv_parallel(filename, n_workers, n_astro=None, parallelizati
     if not Path(filename).exists():
         raise BloodFlowError("File provided does not exist")
     circuit = NGVCircuit(filename)
-    graph = circuit.vasculature.point_graph
+    pv = circuit.vasculature.point_graph
+    graph = Graph.from_point_vasculature(pv)
     graph.edge_properties.index = pd.MultiIndex.from_frame(
         graph.edge_properties.loc[:, ["section_id", "segment_id"]]
     )
-    set_edge_data(graph)
     gv_conn = circuit.gliovascular_connectome
     worker = partial(bloodflow.get_closest_edges, graph=graph)
 
@@ -95,7 +95,7 @@ if __name__ == '__main__':
 
     print(f"loading circuit : start")
     # filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
-    filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/20210325"
+    filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
     graph = load_graph_archngv_parallel(filename_ngv, n_workers=n_cores) # n_astro=50 for debugging (smaller processing needs)
     print(f"loading circuit : finish")
 

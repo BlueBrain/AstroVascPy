@@ -1,12 +1,12 @@
 #!/bin/bash
 
-#SBATCH --job-name="0"
+#SBATCH --job-name="archngv"
 #SBATCH --nodes=1
 
-#SBATCH --account=proj40
+#SBATCH --account=proj16
 #SBATCH --partition=prod
 #SBATCH --constraint=cpu
-#SBATCH --time=01:00:00
+#SBATCH --time=00:30:00
 
 #SBATCH --cpus-per-task=2
 #SBATCH --exclusive
