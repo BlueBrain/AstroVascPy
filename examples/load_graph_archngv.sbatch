@@ -20,6 +20,6 @@ popd
 echo
 echo "### Simulation Start"
 echo
-# It is imperative to use srun and dplace, otherwise the Python processes 
+# It is imperative to use srun and dplace, otherwise the Python processes
 # do not work properly (possible deadlocks and/or performance degradation)
 time srun -n 1 --mpi=none dplace python load_graph_archngv.py

@@ -17,7 +17,10 @@ import psutil
 
 print = partial(print, flush=True)
 
-def load_graph_archngv_parallel(filename, n_workers, n_astro=None, parallelization_backend="multiprocessing"):
+
+def load_graph_archngv_parallel(
+    filename, n_workers, n_astro=None, parallelization_backend="multiprocessing"
+):
     """Load a vasculature from an NGV circuit.
 
     Args:
@@ -68,35 +71,38 @@ def load_graph_archngv_parallel(filename, n_workers, n_astro=None, parallelizati
                 endfoot_ids,
             ):
                 # Only the main process executes this part, i.e. as soon as it receives the parallelly generated data
-                graph.edge_properties.loc[
-                    pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"
-                ] = result_endfeet
+                graph.edge_properties.loc[pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"] = (
+                    result_endfeet
+                )
 
     if parallelization_backend == "joblib":
-        with parallel_config(backend="loky", prefer="processes", n_jobs=n_workers, inner_max_num_threads=1):
+        with parallel_config(
+            backend="loky", prefer="processes", n_jobs=n_workers, inner_max_num_threads=1
+        ):
             parallel = Parallel(return_as="generator", batch_size="auto")
-            parallelized_region = parallel(delayed(worker)(arg) for arg in tqdm(args, total=len(endfoot_ids)))
-            
-            for result_ids, result_endfeet in zip(
-                parallelized_region,
-                endfoot_ids
-            ):
+            parallelized_region = parallel(
+                delayed(worker)(arg) for arg in tqdm(args, total=len(endfoot_ids))
+            )
+
+            for result_ids, result_endfeet in zip(parallelized_region, endfoot_ids):
                 # Only the main process executes this part, i.e. as soon as it receives the parallelly generated data
-                graph.edge_properties.loc[
-                    pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"
-                ] = result_endfeet
+                graph.edge_properties.loc[pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"] = (
+                    result_endfeet
+                )
 
     return graph
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     n_cores = psutil.cpu_count(logical=False)
     print(f"number of physical CPU cores = {n_cores}")
 
     print(f"loading circuit : start")
     # filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
     filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
-    graph = load_graph_archngv_parallel(filename_ngv, n_workers=n_cores) # n_astro=50 for debugging (smaller processing needs)
+    graph = load_graph_archngv_parallel(
+        filename_ngv, n_workers=n_cores
+    )  # n_astro=50 for debugging (smaller processing needs)
     print(f"loading circuit : finish")
 
     print(f"pickle graph : start")
