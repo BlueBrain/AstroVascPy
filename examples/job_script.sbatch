@@ -15,12 +15,19 @@
 #SBATCH --mem=0
 #SBATCH --output="%x-%j.log"
 
-pushd ..
-source setup.sh
-popd
+JOB_SCRIPT=$(scontrol show job ${SLURM_JOB_ID} | awk -F= '/Command=/{print $2}')
+JOB_SCRIPT_DIR=$(dirname ${JOB_SCRIPT})
+
+SETUP_SCRIPT="${JOB_SCRIPT_DIR}/../setup.sh"
+if [[ ! -f ${SETUP_SCRIPT} ]]; then
+    >&2 echo "[ERROR] The 'setup.sh' script could not be found!"
+    exit -1
+fi
+
+source ${SETUP_SCRIPT}
 
 echo
 echo "### Simulation Start"
 echo
-# time srun dplace python compute_static_flow_pressure.py
-time srun dplace python simulate_OU_process.py
+# time srun dplace python "${JOB_SCRIPT_DIR}/compute_static_flow_pressure.py"
+time srun dplace python "${JOB_SCRIPT_DIR}/simulate_OU_process.py"
