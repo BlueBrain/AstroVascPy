@@ -548,7 +548,7 @@ def simulate_ou_process(
     """
 
     if "entry_noise" not in params:
-        raise BloodFlowError(f"Missing parameter: entry_noise")
+        raise BloodFlowError(f"Missing boolean parameter: entry_noise")
     if not isinstance(params["entry_noise"], bool):
         raise BloodFlowError(f"The parameter entry_noise must be true or false")
 
