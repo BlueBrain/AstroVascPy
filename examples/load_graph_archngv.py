@@ -90,8 +90,9 @@ def load_graph_archngv_parallel(
                 )
 
     else:
-        raise BloodFlowError(f"parallelization_backend={parallelization_backend} invalid option.\
-                             Use 'joblib' or 'multiprocessing'.")
+        raise BloodFlowError(
+            f"parallelization_backend={parallelization_backend} invalid option. Use 'joblib' or 'multiprocessing'."
+        )
 
     return graph
 
