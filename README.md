@@ -48,7 +48,7 @@ The code can be run using
 
 ### Load Archngv graph
 
-An archngv graph can be loaded and converted to a pickle binary format, using the script `load_graph_archngv.py` inside the folder `examples`.    
+An archngv graph can be loaded and converted to a pickle binary format, using the script `load_graph_archngv.py` inside the folder `examples`.
 Run the script as
 
     python3 load_graph_archngv.py --filename_ngv "path_to_ngv_circuit" --output_graph "output_graph_name.bin"
