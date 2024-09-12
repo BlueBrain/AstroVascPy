@@ -19,7 +19,7 @@ JOB_SCRIPT_DIR=$(dirname ${JOB_SCRIPT})
 SETUP_SCRIPT="${JOB_SCRIPT_DIR}/../setup.sh"
 if [[ ! -f ${SETUP_SCRIPT} ]]; then
     >&2 echo "[ERROR] The 'setup.sh' script could not be found!"
-    exit -1
+    exit 2
 fi
 
 source ${SETUP_SCRIPT}
