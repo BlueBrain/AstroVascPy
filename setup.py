@@ -27,8 +27,6 @@ reqs = [
     "numpy",
     "pandas",
     "psutil",
-    "joblib",
-    "archngv",
     "pyyaml",
     "scipy",
     "seaborn",
