@@ -24,9 +24,14 @@ fi
 
 source ${SETUP_SCRIPT}
 
+FILENAME_NGV="/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
+# FILENAME_NGV="/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
+
+GRAPH_PATH="./data/graphs_folder/dumped_graph.bin"
+
 echo
 echo "### Loading graph"
 echo
 # It is imperative to use srun and dplace, otherwise the Python processes
 # do not work properly (possible deadlocks and/or performance degradation)
-time srun -n 1 --mpi=none dplace python "${JOB_SCRIPT_DIR}/load_graph_archngv.py"
+time srun -n 1 --mpi=none dplace python ${JOB_SCRIPT_DIR}/load_graph_archngv.py --filename_ngv ${FILENAME_NGV} --output_graph ${GRAPH_PATH}

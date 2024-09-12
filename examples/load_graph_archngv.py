@@ -1,3 +1,4 @@
+import argparse
 import multiprocessing
 import pickle
 from functools import partial
@@ -13,8 +14,6 @@ from tqdm import tqdm
 from astrovascpy import bloodflow
 from astrovascpy.exceptions import BloodFlowError
 from astrovascpy.utils import Graph
-
-print = partial(print, flush=True)
 
 
 def load_graph_archngv_parallel(
@@ -97,20 +96,35 @@ def load_graph_archngv_parallel(
     return graph
 
 
-if __name__ == "__main__":
+print = partial(print, flush=True)
+
+def main():
+    parser = argparse.ArgumentParser(description="File paths for NGVCircuits and output graph.")
+    parser.add_argument('--filename_ngv', type=str, required=True, 
+                        help="Path to the NGV circuits file")
+    parser.add_argument('--output_graph', type=str, required=True, 
+                        help="Path to the output graph file")
+    args = parser.parse_args()
+
+    filename_ngv = args.filename_ngv
+    output_graph = args.output_graph
+
     n_cores = psutil.cpu_count(logical=False)
     print(f"number of physical CPU cores = {n_cores}")
 
+    print(f"NGV Circuits file: {filename_ngv}")
     print("loading circuit : start")
-    # filename_ngv = "/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
-    filename_ngv = "/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
     graph = load_graph_archngv_parallel(
         filename_ngv, n_workers=n_cores
     )  # n_astro=50 for debugging (smaller processing needs)
     print("loading circuit : finish")
 
     print("pickle graph : start")
-    graph_path = "./data/graphs_folder/dumped_graph.bin"
-    filehandler = open(graph_path, "wb")
+    filehandler = open(output_graph, "wb")
     pickle.dump(graph, filehandler)
     print("pickle graph : finish")
+    print(f"Graph file: {output_graph}")
+
+
+if __name__ == "__main__":
+    main()
