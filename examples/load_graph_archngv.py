@@ -74,7 +74,7 @@ def load_graph_archngv_parallel(
                     result_endfeet
                 )
 
-    if parallelization_backend == "joblib":
+    elif parallelization_backend == "joblib":
         with parallel_config(
             backend="loky", prefer="processes", n_jobs=n_workers, inner_max_num_threads=1
         ):
@@ -88,6 +88,10 @@ def load_graph_archngv_parallel(
                 graph.edge_properties.loc[pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"] = (
                     result_endfeet
                 )
+
+    else:
+        raise BloodFlowError(f"parallelization_backend={parallelization_backend} invalid option.\
+                             Use 'joblib' or 'multiprocessing'.")
 
     return graph
 
