@@ -96,10 +96,10 @@ def load_graph_archngv_parallel(
     return graph
 
 
-print = partial(print, flush=True)
-
-
 def main():
+    global print
+    print = partial(print, flush=True)
+
     parser = argparse.ArgumentParser(description="File paths for NGVCircuits and output graph.")
     parser.add_argument(
         "--filename_ngv", type=str, required=True, help="Path to the NGV circuits file"

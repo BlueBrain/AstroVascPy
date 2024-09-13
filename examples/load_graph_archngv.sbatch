@@ -25,7 +25,6 @@ fi
 source ${SETUP_SCRIPT}
 
 FILENAME_NGV="/gpfs/bbp.cscs.ch/project/proj137/NGVCircuits/rat_O1"
-# FILENAME_NGV="/gpfs/bbp.cscs.ch/project/proj62/scratch/ngv_circuits/20210325"
 
 GRAPH_PATH="./data/graphs_folder/dumped_graph.bin"
 
