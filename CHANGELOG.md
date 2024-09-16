@@ -1,5 +1,9 @@
 # Changelog
 
+### v0.1.6
+* New parameter `entry_noise` to enable or disable the endfeet activity on entry nodes. (#41)
+* Add helper script to load archngv graphs and convert them in pickle binary format. (#40)
+
 ### v0.1.5
 * Lazy import of mpi4py module (#27)
 

@@ -38,6 +38,8 @@ class VasculatureParams(TypedDict):
 
     Args:
 
+        entry_noise: Boolean value to enable or disable the endfeet activity on entry nodes.
+
         threshold_r: radius (µm) threshold. A radius smaller than the threshold is considered a capillary. A radius bigger than the threshold is considered an artery.
 
         c_cap: constant used in the ROU parameter calibration for capillaries
@@ -62,6 +64,7 @@ class VasculatureParams(TypedDict):
     blood_viscosity: float
     base_pressure: float
 
+    entry_noise: NotRequired[bool]
     c_cap: NotRequired[float]
     c_art: NotRequired[float]
     threshold_r: NotRequired[float]

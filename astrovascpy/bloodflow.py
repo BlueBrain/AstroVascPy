@@ -548,9 +548,9 @@ def simulate_ou_process(
     """
 
     if "entry_noise" not in params:
-        raise BloodFlowError(f"Missing boolean parameter: entry_noise")
+        raise BloodFlowError("Missing boolean parameter: entry_noise")
     if not isinstance(params["entry_noise"], bool):
-        raise BloodFlowError(f"The parameter entry_noise must be true or false")
+        raise BloodFlowError("The parameter entry_noise must be true or false")
 
     nb_iteration = round(simulation_time / time_step)
     # nb_iteration_noise = number of time_steps before relaxation starts:
@@ -591,11 +591,13 @@ def simulate_ou_process(
         if graph is not None:
             if radii is not None:
                 graph.edge_properties.loc[end_df.index, "radius"] = radii[:, time_it]
-            
+
             if params["entry_noise"]:
                 radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].to_numpy()
             else:
-                radii_at_entry_edges = graph.edge_properties["radius_origin"].iloc[input_edge].to_numpy()
+                radii_at_entry_edges = (
+                    graph.edge_properties["radius_origin"].iloc[input_edge].to_numpy()
+                )
 
             radii_at_entry_edges = graph.edge_properties["radius"].iloc[input_edge].to_numpy()
             input_flows = entry_speed[time_it] * np.pi * radii_at_entry_edges**2
