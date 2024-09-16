@@ -35,7 +35,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.todo",
     "sphinx_click",
-    "m2r2",
+    "sphinx_mdinclude",
 ]
 
 todo_include_todos = True

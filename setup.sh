@@ -2,6 +2,8 @@ echo
 echo "### setup/set env started"
 echo
 
+SETUP_DIR=$(dirname ${BASH_SOURCE[0]})
+
 if command -v module &> /dev/null
 then
     module purge
@@ -26,7 +28,7 @@ else
             conda install -y pip
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
-            "$CONDA_PREFIX/bin/pip" install tox
+            "$CONDA_PREFIX/bin/pip" install tox joblib archngv
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
         fi
@@ -58,15 +60,15 @@ then
         echo "python-venv already set"
         source python-venv/bin/activate
     else
-        python3 -m venv --prompt astrovascpy python-venv
-        source python-venv/bin/activate
+        python3 -m venv --prompt astrovascpy ${SETUP_DIR}/python-venv
+        source ${SETUP_DIR}/python-venv/bin/activate
         python3 -m pip install --upgrade pip
     fi
-    pip3 install -e .
-    pip3 install tox
+    pip3 install -e ${SETUP_DIR}
+    pip3 install tox joblib archngv
 else
     conda_bin=`conda info | grep "active env location" | grep -o "/.*"`/bin
-    $conda_bin/pip install -e .
+    $conda_bin/pip install -e ${SETUP_DIR}
 fi
 
 # Backend solver/library for the linear systems

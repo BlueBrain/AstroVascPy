@@ -37,7 +37,7 @@ reqs = [
 ]
 
 doc_reqs = [
-    "m2r2",
+    "sphinx-mdinclude",
     "sphinx",
     "sphinx-bluebrain-theme",
     "sphinx-click",

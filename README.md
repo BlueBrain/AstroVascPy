@@ -46,6 +46,13 @@ The code can be run using
 
     python3 compute_static_flow_pressure.py
 
+### Load Archngv graph
+
+An archngv graph can be loaded and converted to a pickle binary format, using the script `load_graph_archngv.py` inside the folder `examples`.
+Run the script as
+
+    python3 load_graph_archngv.py --filename_ngv "path_to_ngv_circuit" --output_graph "output_graph_name.bin"
+
 ### Sonata reports
 
 Structure of the reports:
