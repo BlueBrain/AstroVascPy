@@ -11,6 +11,8 @@ max_nb_inputs: 3 # maximum number of inputs to inject flow/pressure into vascula
 
 base_pressure: 1.33e-3  # reference pressure in g * um^{-1} * s^{-2}. At resting state equal to the external pressure
 
+# Enable/Disable endfeet activity on entry nodes.
+entry_noise: true
 
 ### OU calibration parameters
 
