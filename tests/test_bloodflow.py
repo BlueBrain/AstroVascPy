@@ -36,6 +36,7 @@ def params():
         "max_nb_inputs": 3,
         "depth_ratio": 0.05,
         "vasc_axis": 1,
+        "entry_noise": True,
         "threshold_r": 3,
         "max_r_capill": 1.38,
         "t_2_max_capill": 2.7,
