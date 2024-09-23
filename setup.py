@@ -14,6 +14,7 @@ spec.loader.exec_module(module)
 VERSION = module.VERSION
 
 reqs = [
+    "archngv",
     "cached-property",
     "click",
     "coverage",
@@ -24,6 +25,7 @@ reqs = [
     "morphio",
     "mpi4py",
     "networkx",
+    "nexusforge",
     "numpy",
     "pandas",
     "psutil",
