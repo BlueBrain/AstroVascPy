@@ -2,6 +2,8 @@
 # coding: utf-8
 
 import argparse
+import getpass
+import glob
 import multiprocessing
 import pickle
 from functools import partial
@@ -12,17 +14,13 @@ import pandas as pd
 import psutil
 from archngv import NGVCircuit
 from joblib import Parallel, delayed, parallel_config
+from kgforge.core import KnowledgeGraphForge, Resource
+from kgforge.specializations.resources import Dataset
 from tqdm import tqdm
 
 from astrovascpy import bloodflow
 from astrovascpy.exceptions import BloodFlowError
 from astrovascpy.utils import Graph
-
-import getpass
-from kgforge.core import KnowledgeGraphForge
-from kgforge.core import Resource
-from kgforge.specializations.resources import Dataset
-import glob
 
 
 def get_circuit_conf(circuit_name):
@@ -34,35 +32,33 @@ def get_circuit_conf(circuit_name):
 
     TOKEN = getpass.getpass()
 
-    nexus_endpoint = "https://bbp.epfl.ch/nexus/v1" # production environment
+    nexus_endpoint = "https://bbp.epfl.ch/nexus/v1"  # production environment
 
     ORG = "bbp"
     PROJECT = "mmb-neocortical-regions-ngv"
 
-    forge = KnowledgeGraphForge("https://raw.githubusercontent.com/BlueBrain/nexus-forge/master/examples/notebooks/use-cases/prod-forge-nexus.yml",
-                               endpoint=nexus_endpoint,
-                               bucket=f"{ORG}/{PROJECT}",
-                               token= TOKEN,
-                               debug=True
-                               )
+    forge = KnowledgeGraphForge(
+        "https://raw.githubusercontent.com/BlueBrain/nexus-forge/master/examples/notebooks/use-cases/prod-forge-nexus.yml",
+        endpoint=nexus_endpoint,
+        bucket=f"{ORG}/{PROJECT}",
+        token=TOKEN,
+        debug=True,
+    )
 
     p = forge.paths("Dataset")
-    resources = forge.search(p.type=="DetailedCircuit", p.name == 'NGV O1.v5 (Rat)', limit=30)
+    resources = forge.search(p.type == "DetailedCircuit", p.name == "NGV O1.v5 (Rat)", limit=30)
 
     forge.as_dataframe(resources)
     if len(resources) != 1:
-        print('There are several NGV circuit with ths name')
+        print("There are several NGV circuit with ths name")
         return None
     else:
         circuit = resources[0]
         circuitConfigPath = circuit.circuitConfigPath.url
-        circuitConfigPath = circuitConfigPath[len('file://'):]
-        print(f'circuitConfigPath: {circuitConfigPath}')
-        
+        circuitConfigPath = circuitConfigPath[len("file://") :]
+        print(f"circuitConfigPath: {circuitConfigPath}")
+
         return circuitConfigPath
-
-
-
 
 
 def load_graph_archngv_parallel(
@@ -150,17 +146,15 @@ def main():
     print = partial(print, flush=True)
 
     parser = argparse.ArgumentParser(description="File paths for NGVCircuits and output graph.")
-    parser.add_argument(
-        "--circuit_name", type=str, required=True, help="NGV circuits nexus name"
-    )
+    parser.add_argument("--circuit_name", type=str, required=True, help="NGV circuits nexus name")
     parser.add_argument(
         "--output_graph", type=str, required=True, help="Path to the output graph file"
     )
     args = parser.parse_args()
 
     circuit_name = args.circuit_name
-    #filename_ngv = args.filename_ngv
-    filename_ngv  = get_circuit_conf(circuit_name)
+    # filename_ngv = args.filename_ngv
+    filename_ngv = get_circuit_conf(circuit_name)
 
     output_graph = args.output_graph
 
@@ -183,7 +177,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
