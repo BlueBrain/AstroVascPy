@@ -25,7 +25,7 @@ from astrovascpy.utils import Graph
 
 def get_circuit_conf(circuit_name):
     """
-    retreive nexus NGV config entry
+    retrieve nexus NGV config entry
     param:
     circuit_name(str): the nexus name of the NGV circuit to load"
     """
@@ -50,7 +50,7 @@ def get_circuit_conf(circuit_name):
 
     forge.as_dataframe(resources)
     if len(resources) != 1:
-        print("There are several NGV circuit with ths name")
+        print("There are several NGV circuit with this name")
         return None
     else:
         circuit = resources[0]

@@ -11,7 +11,7 @@
 
 #JOB_SCRIPT=$(scontrol show job ${SLURM_JOB_ID} | awk -F= '/Command=/{print $2}')
 #JOB_SCRIPT_DIR=$(dirname ${JOB_SCRIPT})
-#JOB_SCRIPT_DIR=/gpfs/bbp.cscs.ch/project/proj137/scratch/jacquemi/Nexus 
+#JOB_SCRIPT_DIR=/gpfs/bbp.cscs.ch/project/proj137/scratch/jacquemi/Nexus
 
 SETUP_SCRIPT="${JOB_SCRIPT_DIR}/../setup.sh"
 SETUP_SCRIPT="./setup.sh"
