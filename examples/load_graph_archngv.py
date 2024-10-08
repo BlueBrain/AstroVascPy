@@ -2,19 +2,19 @@
 # coding: utf-8
 
 import argparse
+import base64
 import getpass
-from os import environ
 import glob
 import multiprocessing
 import pickle
 from functools import partial
+from os import environ
 from pathlib import Path
-import base64
-import requests
 
 import numpy as np
 import pandas as pd
 import psutil
+import requests
 from archngv import NGVCircuit
 from joblib import Parallel, delayed, parallel_config
 from kgforge.core import KnowledgeGraphForge, Resource
@@ -212,9 +212,8 @@ def main():
 
     if args.circuit_name is not None:
         circuit_name = args.circuit_name
-        circtui_path = None
         filename_ngv = get_nexus_circuit_conf(circuit_name)
-        if filename_ngv == None:
+        if filename_ngv is None:
             print("Error: Could not obtain a valid file path for the NGV circuit")
             return -1
 
@@ -223,7 +222,7 @@ def main():
     # filename_ngv = args.filename_ngv
 
     else:
-        print(f"ERROR: circuit-name or circuit-path must be provided")
+        print("ERROR: circuit-name or circuit-path must be provided")
         return -1
 
     print(f"INFO: filename_ngv {filename_ngv} ")
