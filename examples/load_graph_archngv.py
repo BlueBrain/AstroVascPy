@@ -32,10 +32,10 @@ def get_nexus_token(
     nexus_url="https://bbpauth.epfl.ch/auth/realms/BBP/protocol/openid-connect/token",
 ):
     """
-    retreive a Nexus Token from keycloak
+    retrieve a Nexus Token from keycloak
     param:
        client_id(str): the keycloak client id
-       environ_name(str): the name of the environement variable that holds the keycloak secret
+       environ_name(str): the name of the environment variable that holds the keycloak secret
        nexus_url(str)
     """
     try:
