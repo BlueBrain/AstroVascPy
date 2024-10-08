@@ -45,9 +45,9 @@ def get_nexus_token(
         url = nexus_url
 
         payload = "grant_type=client_credentials&scope=openid"
-        authorization = base64.b64encode(
-            f"{client_id}:{client_secret}".encode("utf-8")
-        ).decode("ascii")
+        authorization = base64.b64encode(f"{client_id}:{client_secret}".encode("utf-8")).decode(
+            "ascii"
+        )
         headers = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Authorization": f"Basic {authorization}",
@@ -65,7 +65,7 @@ def get_nexus_token(
         mexus_token = r.json()["access_token"]
         return mexus_token
     except Exception as error:
-        print(f'Error: {error}')
+        print(f"Error: {error}")
         return None
 
 
@@ -96,9 +96,7 @@ def get_nexus_circuit_conf(
     )
 
     p = forge.paths("Dataset")
-    resources = forge.search(
-        p.type == "DetailedCircuit", p.name == circuit_name, limit=30
-    )
+    resources = forge.search(p.type == "DetailedCircuit", p.name == circuit_name, limit=30)
 
     forge.as_dataframe(resources)
     if len(resources) != 1:
@@ -143,12 +141,8 @@ def load_graph_archngv_parallel(
 
     args = (
         (
-            gv_conn.vasculature_sections_segments(
-                endfoot_id
-            ).vasculature_section_id.values[0],
-            gv_conn.vasculature_sections_segments(
-                endfoot_id
-            ).vasculature_segment_id.values[0],
+            gv_conn.vasculature_sections_segments(endfoot_id).vasculature_section_id.values[0],
+            gv_conn.vasculature_sections_segments(endfoot_id).vasculature_segment_id.values[0],
             gv_conn.get(endfoot_id, ["endfoot_compartment_length"]).values[0],
         )
         for astro_id in np.arange(n_astro or circuit.astrocytes.size)
@@ -174,9 +168,9 @@ def load_graph_archngv_parallel(
                 endfoot_ids,
             ):
                 # Only the main process executes this part, i.e. as soon as it receives the parallelly generated data
-                graph.edge_properties.loc[
-                    pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"
-                ] = result_endfeet
+                graph.edge_properties.loc[pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"] = (
+                    result_endfeet
+                )
 
     elif parallelization_backend == "joblib":
         with parallel_config(
@@ -192,9 +186,9 @@ def load_graph_archngv_parallel(
 
             for result_ids, result_endfeet in zip(parallelized_region, endfoot_ids):
                 # Only the main process executes this part, i.e. as soon as it receives the parallelly generated data
-                graph.edge_properties.loc[
-                    pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"
-                ] = result_endfeet
+                graph.edge_properties.loc[pd.MultiIndex.from_arrays(result_ids.T), "endfeet_id"] = (
+                    result_endfeet
+                )
 
     else:
         raise BloodFlowError(
@@ -208,15 +202,9 @@ def main():
     global print
     print = partial(print, flush=True)
 
-    parser = argparse.ArgumentParser(
-        description="File paths for NGVCircuits and output graph."
-    )
-    parser.add_argument(
-        "--circuit-name", type=str, required=False, help="NGV circuits nexus name"
-    )
-    parser.add_argument(
-        "--circuit-path", type=str, required=False, help="Path to the NGV circuits"
-    )
+    parser = argparse.ArgumentParser(description="File paths for NGVCircuits and output graph.")
+    parser.add_argument("--circuit-name", type=str, required=False, help="NGV circuits nexus name")
+    parser.add_argument("--circuit-path", type=str, required=False, help="Path to the NGV circuits")
     parser.add_argument(
         "--output-graph", type=str, required=True, help="Path to the output graph file"
     )
@@ -227,7 +215,7 @@ def main():
         circtui_path = None
         filename_ngv = get_nexus_circuit_conf(circuit_name)
         if filename_ngv == None:
-            print('Error: Could not obtain a valid file path for the NGV circuit')
+            print("Error: Could not obtain a valid file path for the NGV circuit")
             return -1
 
     elif args.circuit_path is not None:
@@ -260,5 +248,5 @@ def main():
 
 
 if __name__ == "__main__":
-    print('INFO: Start load_graph_archngv.py')
+    print("INFO: Start load_graph_archngv.py")
     main()
