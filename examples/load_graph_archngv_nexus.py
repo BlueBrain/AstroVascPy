@@ -2,19 +2,16 @@
 # coding: utf-8
 
 import argparse
-import base64
 import getpass
 import glob
 import multiprocessing
 import pickle
 from functools import partial
-from os import environ
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import psutil
-import requests
 from archngv import NGVCircuit
 from joblib import Parallel, delayed, parallel_config
 from kgforge.core import KnowledgeGraphForge, Resource
@@ -26,77 +23,30 @@ from astrovascpy.exceptions import BloodFlowError
 from astrovascpy.utils import Graph
 
 
-def get_nexus_token(
-    client_id="bbp-molsys-sa",
-    environ_name="KCS",
-    nexus_url="https://bbpauth.epfl.ch/auth/realms/BBP/protocol/openid-connect/token",
-):
-    """
-    retrieve a Nexus Token from keycloak
-    param:
-       client_id(str): the keycloak client id
-       environ_name(str): the name of the environment variable that holds the keycloak secret
-       nexus_url(str)
-    """
-    try:
-        client_secret = environ[environ_name]
-
-        # bbp keycloack token endpoint
-        url = nexus_url
-
-        payload = "grant_type=client_credentials&scope=openid"
-        authorization = base64.b64encode(f"{client_id}:{client_secret}".encode("utf-8")).decode(
-            "ascii"
-        )
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Authorization": f"Basic {authorization}",
-        }
-
-        # request the token
-        r = requests.request(
-            "POST",
-            url=url,
-            headers=headers,
-            data=payload,
-        )
-
-        # get access token
-        mexus_token = r.json()["access_token"]
-        return mexus_token
-    except Exception as error:
-        print(f"Error: {error}")
-        return None
-
-
-def get_nexus_circuit_conf(
-    circuit_name, nexus_org="bbp", nexus_project="mmb-neocortical-regions-ngv"
-):
+def get_circuit_conf(circuit_name):
     """
     retrieve nexus NGV config entry
     param:
-    circuit_name(str): the Nexus name of the NGV circuit to load
-    nexus_org(str): The Nexus organisation
-    nexus_projec(str): The Nexus project that holds the circuit
+    circuit_name(str): the nexus name of the NGV circuit to load"
     """
 
-    nexus_token = get_nexus_token()
-    if nexus_token is None:
-        print("Error: Cannot get a valid Nexus token")
-        return None
+    TOKEN = getpass.getpass()
 
     nexus_endpoint = "https://bbp.epfl.ch/nexus/v1"  # production environment
+
+    ORG = "bbp"
+    PROJECT = "mmb-neocortical-regions-ngv"
 
     forge = KnowledgeGraphForge(
         "https://raw.githubusercontent.com/BlueBrain/nexus-forge/master/examples/notebooks/use-cases/prod-forge-nexus.yml",
         endpoint=nexus_endpoint,
-        bucket=f"{nexus_org}/{nexus_project}",
-        token=nexus_token,
+        bucket=f"{ORG}/{PROJECT}",
+        token=TOKEN,
         debug=True,
     )
 
     p = forge.paths("Dataset")
-    resources = forge.search(p.type == "DetailedCircuit", p.name == circuit_name, limit=30)
+    resources = forge.search(p.type == "DetailedCircuit", p.name == "NGV O1.v5 (Rat)", limit=30)
 
     forge.as_dataframe(resources)
     if len(resources) != 1:
@@ -158,11 +108,7 @@ def load_graph_archngv_parallel(
         with multiprocessing.Pool(n_workers) as pool:
             for result_ids, result_endfeet in zip(
                 tqdm(
-                    pool.imap(
-                        worker,
-                        args,
-                        chunksize=max(1, int(len(endfoot_ids) / n_workers)),
-                    ),
+                    pool.imap(worker, args, chunksize=max(1, int(len(endfoot_ids) / n_workers))),
                     total=len(endfoot_ids),
                 ),
                 endfoot_ids,
@@ -174,10 +120,7 @@ def load_graph_archngv_parallel(
 
     elif parallelization_backend == "joblib":
         with parallel_config(
-            backend="loky",
-            prefer="processes",
-            n_jobs=n_workers,
-            inner_max_num_threads=1,
+            backend="loky", prefer="processes", n_jobs=n_workers, inner_max_num_threads=1
         ):
             parallel = Parallel(return_as="generator", batch_size="auto")
             parallelized_region = parallel(
@@ -203,29 +146,15 @@ def main():
     print = partial(print, flush=True)
 
     parser = argparse.ArgumentParser(description="File paths for NGVCircuits and output graph.")
-    parser.add_argument("--circuit-name", type=str, required=False, help="NGV circuits nexus name")
-    parser.add_argument("--circuit-path", type=str, required=False, help="Path to the NGV circuits")
+    parser.add_argument("--circuit_name", type=str, required=True, help="NGV circuits nexus name")
     parser.add_argument(
-        "--output-graph", type=str, required=True, help="Path to the output graph file"
+        "--output_graph", type=str, required=True, help="Path to the output graph file"
     )
     args = parser.parse_args()
 
-    if args.circuit_name is not None:
-        circuit_name = args.circuit_name
-        filename_ngv = get_nexus_circuit_conf(circuit_name)
-        if filename_ngv is None:
-            print("Error: Could not obtain a valid file path for the NGV circuit")
-            return -1
-
-    elif args.circuit_path is not None:
-        filename_ngv = args.circuit_path
+    circuit_name = args.circuit_name
     # filename_ngv = args.filename_ngv
-
-    else:
-        print("ERROR: circuit-name or circuit-path must be provided")
-        return -1
-
-    print(f"INFO: filename_ngv {filename_ngv} ")
+    filename_ngv = get_circuit_conf(circuit_name)
 
     output_graph = args.output_graph
 
@@ -240,12 +169,11 @@ def main():
     print("loading circuit : finish")
 
     print("pickle graph : start")
-    with open(output_graph, "wb") as filehandler:
-        pickle.dump(graph, filehandler)
-        print("pickle graph : finish")
+    filehandler = open(output_graph, "wb")
+    pickle.dump(graph, filehandler)
+    print("pickle graph : finish")
     print(f"Graph file: {output_graph}")
 
 
 if __name__ == "__main__":
-    print("INFO: Start load_graph_archngv.py")
     main()

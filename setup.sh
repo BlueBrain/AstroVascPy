@@ -28,7 +28,7 @@ else
             conda install -y pip
 
             conda install -y -c conda-forge mpi mpi4py petsc petsc4py
-            "$CONDA_PREFIX/bin/pip" install tox joblib archngv
+            "$CONDA_PREFIX/bin/pip" install tox joblib archngv nexusforge
             # If complex number support is needed
             #conda install -y -c conda-forge mpi mpi4py "petsc=*=*complex*" "petsc4py=*=*complex*"
         fi
@@ -65,7 +65,7 @@ then
         python3 -m pip install --upgrade pip
     fi
     pip3 install -e ${SETUP_DIR}
-    pip3 install tox joblib archngv
+    pip3 install tox joblib archngv nexusforge
 else
     conda_bin=`conda info | grep "active env location" | grep -o "/.*"`/bin
     $conda_bin/pip install -e ${SETUP_DIR}
