@@ -68,7 +68,7 @@ Here are the units of these entities:
 
 Stéphanie Battini, Nicola Cantarutti, Christos Kotsalos and Tristan Carel
 
-Link to the article on [Bio-arxiv](https://www.biorxiv.org/content/10.1101/2024.11.14.623572v1) 
+Link to the article on [Bio-arxiv](https://www.biorxiv.org/content/10.1101/2024.11.14.623572v1)
 
 ## Funding and Acknowledgements
 
